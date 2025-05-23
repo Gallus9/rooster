@@ -9,7 +9,10 @@ import com.parse.ParseCloud
 import kotlinx.coroutines.launch
 
 @Composable
-fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
+fun TransferVerificationScreen(
+    orderId: String,
+    onVerified: () -> Unit,
+) {
     var color by remember { mutableStateOf("") }
     var condition by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
@@ -23,14 +26,14 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
             value = color,
             onValueChange = { color = it },
             label = { Text("Fowl Color") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = condition,
             onValueChange = { condition = it },
             label = { Text("Fowl Condition") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = {
@@ -58,4 +61,3 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
         }
     }
 }
-

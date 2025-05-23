@@ -21,7 +21,11 @@ object FowlRepository {
         }
     }
 
-    suspend fun addFowl(name: String, type: String, birthDate: String) {
+    suspend fun addFowl(
+        name: String,
+        type: String,
+        birthDate: String,
+    ) {
         val fowl = ParseObject("Fowl")
         fowl.put("name", name)
         fowl.put("type", type)
@@ -30,4 +34,3 @@ object FowlRepository {
         fowl.saveInBackground()
     }
 }
-

@@ -7,12 +7,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.parse.ParseACL
 import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
-import com.parse.ParseACL
-import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun FowlScreen() {
@@ -80,7 +80,7 @@ fun FowlScreen() {
             value = name,
             onValueChange = { name = it },
             label = { Text("Name") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -95,7 +95,7 @@ fun FowlScreen() {
             value = birthDate,
             onValueChange = { birthDate = it },
             label = { Text("Birth Date (YYYY-MM-DD)") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = { addFowl() }, enabled = name.isNotBlank() && birthDate.isNotBlank()) {

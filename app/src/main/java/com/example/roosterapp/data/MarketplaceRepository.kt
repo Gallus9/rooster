@@ -21,7 +21,10 @@ object MarketplaceRepository {
         }
     }
 
-    suspend fun addListing(title: String, price: Double) {
+    suspend fun addListing(
+        title: String,
+        price: Double,
+    ) {
         val listing = ParseObject("Listing")
         listing.put("title", title)
         listing.put("price", price)
@@ -29,4 +32,3 @@ object MarketplaceRepository {
         listing.saveInBackground()
     }
 }
-

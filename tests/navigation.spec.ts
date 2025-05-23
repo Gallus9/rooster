@@ -27,3 +27,5 @@ test.describe('Rooster App Navigation', () => {
   });
 });
 
+// NOTE: This test is designed for web apps. For Android UI automation, use Espresso, UIAutomator, or Appium with Playwright.
+// If running on an emulator, ensure the app is accessible via a web server or use the correct automation tool for Android.

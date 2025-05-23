@@ -3,7 +3,10 @@ package com.example.rooster
 import com.parse.ParseACL
 import com.parse.ParseUser
 
-fun setUserRoleAndAcl(user: ParseUser, role: String) {
+fun setUserRoleAndAcl(
+    user: ParseUser,
+    role: String,
+) {
     user.put("role", role)
     val acl = ParseACL(user)
     acl.setPublicReadAccess(false)
@@ -13,4 +16,3 @@ fun setUserRoleAndAcl(user: ParseUser, role: String) {
     user.acl = acl
     user.saveInBackground()
 }
-

@@ -21,7 +21,10 @@ object CommunityRepository {
         }
     }
 
-    suspend fun addPost(content: String, imageUrl: String? = null) {
+    suspend fun addPost(
+        content: String,
+        imageUrl: String? = null,
+    ) {
         val post = ParseObject("Post")
         post.put("content", content)
         post.put("user", ParseUser.getCurrentUser())
@@ -29,4 +32,3 @@ object CommunityRepository {
         post.saveInBackground()
     }
 }
-
