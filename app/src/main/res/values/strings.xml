@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Rooster</string>
+    <!-- Parse/Back4App credentials -->
+    <string name="back4app_server_url">https://parseapi.back4app.com/</string>
+    <string name="back4app_app_id">QvZCAlxmMvHYLsJskXreUhOS72OqalGh91mF0W1w</string>
+    <string name="back4app_client_key">oagUkmeNPCTQZUUD8ENBuM6T2DYPAVyQi2T3LFol</string>
+    <string name="parse_app_id">QvZCAlxmMvHYLsJskXreUhOS72OqalGh91mF0W1w</string>
+    <string name="parse_rest_api_key">6ipx7hEmYA6RJ06YqJexKdBGSeYJJqpIxKP5aUQ1</string>
+</resources>
+

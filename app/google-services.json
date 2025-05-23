@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "836501347875",
+    "firebase_url": "https://gallus-9e434-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "gallus-9e434",
+    "storage_bucket": "gallus-9e434.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:836501347875:android:1e933a4a442c71453fdb96",
+        "android_client_info": {
+          "package_name": "com.company.MVP"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3St2Z5miubTL6SPb848xwwNzKfflx9HI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:836501347875:android:c95b0791028e69873fdb96",
+        "android_client_info": {
+          "package_name": "com.example.mvp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3St2Z5miubTL6SPb848xwwNzKfflx9HI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:836501347875:android:df41bf516141cef33fdb96",
+        "android_client_info": {
+          "package_name": "com.example.rooster"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3St2Z5miubTL6SPb848xwwNzKfflx9HI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

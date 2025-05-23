@@ -1,0 +1,214 @@
+# Project Update Log
+
+## [2025-05-23]
+
+### Firebase BoM and Dependencies
+- Added Firebase Android BoM (Bill of Materials) to `app/build.gradle.kts`.
+- Added dependencies for Firebase Authentication and Firestore using the BoM.
+- No errors found after Gradle sync.
+
+### Crashlytics Test Crash Button
+- Added a Jetpack Compose Button labeled "Test Crash" to `MainActivity.kt`.
+- Pressing the button throws a `RuntimeException` to test Crashlytics integration.
+- No errors found after code changes.
+
+---
+
+## [2025-05-23] Parse SDK Integration
+
+### Repository and Dependency
+- Added Jitpack repository to settings.gradle.kts for Parse SDK support.
+- Added Parse Android SDK dependency (v4.4.1) to app/build.gradle.kts.
+
+### Manifest and Credentials
+- Added INTERNET and ACCESS_NETWORK_STATE permissions to AndroidManifest.xml.
+- Added Parse meta-data tags to AndroidManifest.xml.
+- Registered App.kt as the Application class in AndroidManifest.xml.
+- Added placeholder Back4App credentials to res/values/strings.xml.
+
+### Parse Initialization
+- Created App.kt to initialize Parse SDK at application startup.
+
+### Parse Test Code
+- Added code in MainActivity to save a test ParseObject to verify Parse connectivity.
+
+---
+
+## [2025-05-23] Parse SDK Dependency Fix
+
+- Corrected the Parse SDK dependency in app/build.gradle.kts to use the lowercase artifact name: 'parse' instead of 'Parse'.
+  - Now using: implementation("com.github.parse-community.Parse-SDK-Android:parse:1.26.0")
+- Updated Back4App credentials in strings.xml with actual Application ID and Client Key.
+
+### Next Steps
+- Sync your project and build again. The Parse SDK dependency should now resolve correctly.
+- If you encounter further issues, check the updates.txt for the latest changes and troubleshooting steps.
+
+(Every developer should check this file for recent changes and next steps.)
+
+---
+
+## [2025-05-23] Parse REST API Integration
+
+### Utility Class
+- Added `ParseRestClient.kt` in `com.example.rooster` to handle Parse REST API calls (using OkHttp).
+
+### Credentials
+- Added `parse_app_id` and `parse_rest_api_key` to `res/values/strings.xml` for REST API authentication.
+- Updated these values with actual Back4App Application ID and REST API Key.
+
+### MainActivity Usage
+- Added a button in `MainActivity.kt` to create a `GameScore` object via the Parse REST API.
+- Result of the API call is displayed in the UI for user feedback.
+
+### Developer Notes
+- To use the REST API, ensure `parse_app_id` and `parse_rest_api_key` are set correctly in `strings.xml`.
+- You can extend `ParseRestClient` for more REST operations (read, update, delete) as needed.
+
+---
+
+## Next Actions Guidance
+- Run the app and press the "Test Crash" button to trigger a test crash.
+- Check the Firebase Crashlytics dashboard for the crash report.
+- Remove or comment out the test crash button after verifying Crashlytics is working.
+- Continue integrating other Firebase features as needed.
+
+---
+
+## Next Actions Guidance (Parse)
+- Replace the placeholder values in strings.xml with your actual Back4App Application ID and Client Key.
+- Run the app. Check Logcat for "Object saved." to confirm Parse is working.
+- Visit your Back4App dashboard to see the new object in the "FirstClass" table.
+- Remove or comment out the test object code in MainActivity after confirming Parse connectivity.
+
+---
+
+## [2025-05-23] Developer Guidance and Next Steps
+
+### Verification Steps
+- Run the app and use the "Test Crash" button to verify Firebase Crashlytics. Check the Firebase dashboard for the crash report. Remove or comment out the test crash button after verification.
+- Update `res/values/strings.xml` with your actual Back4App Application ID and Client Key. Run the app and check Logcat for "Object saved." to confirm Parse connectivity. Verify the object in the Back4App dashboard. Remove or comment out the test ParseObject code in `MainActivity.kt` after verification.
+
+### Security Best Practices
+- Move sensitive keys (e.g., Parse App ID, REST API Key) to `build.gradle.kts` as `buildConfigField` entries instead of keeping them in `strings.xml`.
+
+### Feature Suggestions
+- Add a delete button for tasks (Firestore and Parse).
+- Implement Firebase Authentication for user-specific task lists.
+- Enhance Gemini AI integration to suggest or prioritize tasks based on user input.
+
+### AI Agent Usage
+- Use GitHub Copilot for code suggestions and autocompletion in Android Studio.
+- Use Firebase Studio for rapid prototyping and testing of UI/backend features.
+- Leverage Gemini AI (via Firebase Vertex AI) for advanced features like task prioritization.
+
+### Learning Resources
+- Jetpack Compose: https://developer.android.com/jetpack/compose
+- Firebase Android: https://firebase.google.com/docs/android
+- Parse Android SDK: https://docs.parseplatform.org/android/guide/
+
+### Next Actions
+1. Update credentials in `strings.xml` or `build.gradle.kts` as needed.
+2. Run the app to verify Firebase and Parse integrations.
+3. Comment out or remove test code after verification.
+4. Add new features (e.g., delete button, authentication, AI-driven suggestions).
+5. Use AI tools (Copilot, Firebase Studio) to accelerate development.
+
+(Every developer should check this file for recent changes and next steps.)
+
+---
+
+## [2025-05-23] AuthModule Implementation
+
+### AuthScreen and User Role Management
+- Created `AuthScreen.kt` with Jetpack Compose UI for login and registration, including username, password, and role selection (Farmer/Consumer).
+- Integrated `AuthScreen` into `MainActivity.kt` to display authentication UI if the user is not logged in.
+- Added `AuthUtils.kt` with a function to set user role and ACL after registration.
+- Refactored `MainActivity.kt` to use Compose-based conditional navigation for authentication state.
+
+### Next Steps
+- Continue with CommunityModule: implement community feed UI and backend integration.
+- Update this log after each major feature or code change.
+
+---
+
+## [2025-05-23] CommunityModule Implementation
+
+### Community Feed UI
+- Created `CommunityFeedScreen.kt` with Jetpack Compose UI for the community feed.
+- The screen includes a text input and button to post, and a LazyColumn to display posts from the Parse "Post" class.
+- Each post is shown as a Card with username, content, and a Like button (like logic placeholder).
+- Posts are fetched from Parse and displayed in descending order by creation date.
+
+### Next Steps
+- Integrate `CommunityFeedScreen` into the main app UI for authenticated users.
+- Implement like/comment functionality and backend logic as needed.
+- Update this log after each major feature or code change.
+
+---
+
+## [2025-05-23] Community Feed Integration
+
+### Community Feed UI Integration
+- Integrated `CommunityFeedScreen` into `MainActivity.kt` so authenticated users see the community feed after login/registration.
+- The main content now displays the community feed, replacing previous test/demo content.
+
+### Next Steps
+- Implement like/comment functionality for posts in the community feed.
+- Continue with Traceability or Marketplace modules as needed.
+- Update this log after each major feature or code change.
+
+---
+
+## [2025-05-23] TraceabilityModule: Fowl Profiles & Navigation
+
+### FowlScreen and Navigation
+- Created `FowlScreen.kt` with Jetpack Compose UI for adding and viewing fowl profiles (name, type, birth date) using Parse backend.
+- Integrated `FowlScreen` into the app via a new BottomNavigation bar in `MainContent` (in `MainActivity.kt`).
+- Users can now switch between Community feed and Fowl profiles. Placeholders added for Marketplace and Profile screens.
+
+### Next Steps
+- Implement Marketplace and Profile modules/screens.
+- Continue updating this log after each major feature or code change.
+
+---
+
+## [2025-05-23] MarketplaceModule: Listings & Navigation
+
+### MarketplaceScreen and Navigation
+- Created `MarketplaceScreen.kt` with Jetpack Compose UI for creating and viewing marketplace listings (title, price, seller) using Parse backend.
+- Integrated `MarketplaceScreen` into the app via the BottomNavigation bar in `MainContent` (in `MainActivity.kt`).
+- Users can now switch between Community, Fowl, and Marketplace screens. Profile screen placeholder remains for future development.
+
+### Next Steps
+- Implement Profile screen/module.
+- Continue updating this log after each major feature or code change.
+
+---
+
+## [2025-05-23] Offline Support (Parse Local Datastore)
+
+### Fowl Profiles Offline Caching
+- Enabled Parse Local Datastore in `App.kt` for offline data support.
+- Updated `FowlScreen.kt` to pin fowl profiles to the local datastore after fetch/add.
+- If network is unavailable, fowl profiles are loaded from the local datastore, allowing offline access and viewing.
+
+### Build Error Fixes
+- Fixed unresolved reference errors in `MainActivity.kt` by adding missing imports for `Box`, `Icon`, and Material icons.
+- The app should now build and run, allowing preview and further development.
+
+### Next Steps
+- Proceed to implement multilingual support (string resources for multiple languages and in-app language switcher).
+- Continue updating this log after each major feature or code change.
+
+---
+
+## [2025-05-23] Build Error Fixes and Dependency Updates
+
+### Build Error Fixes
+- Fixed build errors in MainActivity.kt by moving recreate() out of Composables and into the Activity, passing it as a callback.
+- Added missing dependencies for material-icons-extended and navigation-compose in app/build.gradle.kts.
+- Ensured Parse SDK and icon imports are correct and available after Gradle sync and clean build.
+- Only minor warnings about unused imports remain in MainActivity.kt.
+- Project is now ready for further development and UI preview/testing.
+
