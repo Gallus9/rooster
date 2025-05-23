@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.parse.ParseCloud
-import com.parse.ParseObject
 import kotlinx.coroutines.launch
 
 @Composable
@@ -39,7 +38,7 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
                 try {
                     val params = mapOf("orderId" to orderId, "color" to color, "condition" to condition)
                     val result = ParseCloud.callFunctionInBackground<String>("verifyTransfer", params)
-                    status = result
+                    status = result.result // Use .result to get the String from Task
                     error = null
                     onVerified()
                 } catch (e: Exception) {

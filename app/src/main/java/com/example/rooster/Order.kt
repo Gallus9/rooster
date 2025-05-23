@@ -8,18 +8,7 @@ import com.parse.ParseUser
 class Order : ParseObject() {
     var listing: ParseObject?
         get() = getParseObject("listing")
-        set(value) = put("listing", value)
+        set(value) { value?.let { put("listing", it) } }
 
     var buyer: ParseUser?
-        get() = getParseUser("buyer")
-        set(value) = put("buyer", value)
-
-    var seller: ParseUser?
-        get() = getParseUser("seller")
-        set(value) = put("seller", value)
-
-    var status: String?
-        get() = getString("status")
-        set(value) = put("status", value ?: "pending")
-}
-
+        get() = getParseUser("buyer
