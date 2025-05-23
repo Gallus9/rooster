@@ -12,10 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.rooster.ui.theme.RoosterTheme
-import androidx.compose.material3.Button
-import androidx.compose.foundation.layout.Column
-import android.util.Log
-import com.parse.ParseObject
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue

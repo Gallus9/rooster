@@ -3,6 +3,7 @@ package com.example.rooster
 import android.content.Context
 import android.util.Log
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
 import java.io.IOException
 
@@ -17,7 +18,7 @@ object ParseRestClient {
         json.put("score", score)
         json.put("playerName", playerName)
         json.put("cheatMode", cheatMode)
-        val body = RequestBody.create(MediaType.parse("application/json"), json.toString())
+        val body = RequestBody.create("application/json".toMediaType(), json.toString())
         val request = Request.Builder()
             .url(BASE_URL)
             .addHeader("X-Parse-Application-Id", appId)
@@ -31,9 +32,9 @@ object ParseRestClient {
             }
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    onResult(true, response.body()?.string())
+                    onResult(true, response.body?.string())
                 } else {
-                    onResult(false, response.body()?.string())
+                    onResult(false, response.body?.string())
                 }
             }
         })

@@ -18,6 +18,8 @@ import coil.compose.AsyncImage
 import java.io.InputStream
 import com.parse.ParseFile
 import androidx.compose.ui.platform.LocalContext
+import com.parse.ParseException
+import com.parse.SaveCallback
 
 @Composable
 fun CommunityFeedScreen() {
@@ -40,7 +42,7 @@ fun CommunityFeedScreen() {
             if (e == null && result != null) {
                 posts = result
             } else {
-                error = e?.localizedMessage ?: "Failed to load posts."
+                error = e?.message ?: "Failed to load posts."
             }
         }
     }
@@ -75,33 +77,43 @@ fun CommunityFeedScreen() {
                     val bytes = inputStream?.readBytes()
                     if (bytes != null) {
                         val parseFile = ParseFile("post_image.jpg", bytes)
-                        parseFile.saveInBackground { e ->
+                        parseFile.saveInBackground(SaveCallback { e ->
                             if (e == null) {
                                 post.put("image", parseFile)
-                                post.saveInBackground { e2 ->
+                                post.saveInBackground(SaveCallback { e2 ->
                                     if (e2 == null) {
                                         postText = ""
                                         imageUri = null
                                         fetchPosts()
                                     } else {
-                                        error = e2.localizedMessage ?: "Failed to post."
+                                        error = e2.message ?: "Failed to post."
                                     }
-                                }
+                                })
                             } else {
-                                error = e.localizedMessage ?: "Failed to upload image."
+                                error = (e as? ParseException)?.message ?: "Failed to upload image."
                             }
-                        }
+                        })
+                    } else {
+                        post.saveInBackground(SaveCallback { e2 ->
+                            if (e2 == null) {
+                                postText = ""
+                                imageUri = null
+                                fetchPosts()
+                            } else {
+                                error = e2.message ?: "Failed to post."
+                            }
+                        })
                     }
                 } else {
-                    post.saveInBackground { e ->
-                        if (e == null) {
+                    post.saveInBackground(SaveCallback { e2 ->
+                        if (e2 == null) {
                             postText = ""
                             imageUri = null
                             fetchPosts()
                         } else {
-                            error = e.localizedMessage ?: "Failed to post."
+                            error = e2.message ?: "Failed to post."
                         }
-                    }
+                    })
                 }
             },
             enabled = postText.isNotBlank(),

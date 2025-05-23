@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
+import com.parse.SaveCallback
 
 @Composable
 fun MarketplaceScreen(navController: NavController? = null) {
@@ -60,35 +61,35 @@ fun MarketplaceScreen(navController: NavController? = null) {
             val bytes = inputStream?.readBytes()
             if (bytes != null) {
                 val parseFile = ParseFile("listing_image.jpg", bytes)
-                parseFile.saveInBackground { e ->
+                parseFile.saveInBackground(SaveCallback { e ->
                     if (e == null) {
                         listing.put("image", parseFile)
-                        listing.saveInBackground { e2 ->
+                        listing.saveInBackground(SaveCallback { e2 ->
                             if (e2 == null) {
                                 title = ""
                                 price = ""
                                 imageUri = null
                                 fetchListings()
                             } else {
-                                error = e2.localizedMessage ?: "Failed to add listing."
+                                error = (e2 as? com.parse.ParseException)?.localizedMessage ?: "Failed to add listing."
                             }
-                        }
+                        })
                     } else {
-                        error = e.localizedMessage ?: "Failed to upload image."
+                        error = (e as? com.parse.ParseException)?.localizedMessage ?: "Failed to upload image."
                     }
-                }
+                })
             }
         } else {
-            listing.saveInBackground { e ->
+            listing.saveInBackground(SaveCallback { e ->
                 if (e == null) {
                     title = ""
                     price = ""
                     imageUri = null
                     fetchListings()
                 } else {
-                    error = e.localizedMessage ?: "Failed to add listing."
+                    error = (e as? com.parse.ParseException)?.localizedMessage ?: "Failed to add listing."
                 }
-            }
+            })
         }
     }
 

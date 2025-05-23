@@ -11,4 +11,14 @@ class Order : ParseObject() {
         set(value) { value?.let { put("listing", it) } }
 
     var buyer: ParseUser?
-        get() = getParseUser("buyer
+        get() = getParseUser("buyer")
+        set(value) { value?.let { put("buyer", it) } }
+
+    var seller: ParseUser?
+        get() = getParseUser("seller")
+        set(value) { value?.let { put("seller", it) } }
+
+    var status: String?
+        get() = getString("status")
+        set(value) { put("status", value ?: "pending") }
+}
