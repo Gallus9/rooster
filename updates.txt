@@ -212,3 +212,76 @@
 - Only minor warnings about unused imports remain in MainActivity.kt.
 - Project is now ready for further development and UI preview/testing.
 
+---
+
+## [2025-05-23] MCP Server Config Reference Added
+
+### MCP Server Configurations
+- Added/updated `.config/github-copilot/intellij/mcp.json` to include references for the following Model Context Protocol (MCP) servers and resources:
+    - Playwright MCP (browser automation)
+    - Context7 MCP (up-to-date code docs)
+    - Awesome Linters (curated linter list)
+    - Sequential Thinking MCP (structured thought tracking)
+    - Memory Bank MCP (remote memory bank management)
+    - Steel Puppeteer MCP (Puppeteer browser automation)
+    - Knowledge Graph Memory MCP (persistent memory via knowledge graph)
+    - MCP Compass (MCP discovery and recommendation)
+    - DuckDuckGo Search MCP (web search via DuckDuckGo API)
+- Each entry includes a project URL and description for quick reference.
+- Use this config as a resource for integrating or exploring advanced AI/LLM tooling and automation in your workflow.
+
+### Next Steps
+- Review `.config/github-copilot/intellij/mcp.json` for available MCP servers and their capabilities.
+- Integrate or experiment with these servers as needed for advanced AI, automation, or documentation features.
+- Continue updating this log after each major feature or config change.
+
+---
+
+## [2025-05-23] MCP Servers Integration & AI-Driven Workflow Guidance
+
+### MCP Server Integration
+- Integrated multiple Model Context Protocol (MCP) servers in `.config/github-copilot/intellij/mcp.json` to enhance development:
+    - Playwright MCP: Browser/UI automation and testing
+    - Context7 MCP: Natural language to code/UI generation
+    - Awesome Linters: Curated linter/code quality reference
+    - Sequential Thinking MCP: Step-by-step debugging and structured problem solving
+    - Memory Bank MCP: Store/retrieve code, logs, and project memory
+    - Steel Puppeteer MCP: Browser/emulator automation and screenshotting
+    - Knowledge Graph Memory MCP: Persistent memory and relationship management
+    - MCP Compass: Discovery and recommendation of MCP servers
+    - DuckDuckGo Search MCP: Web search for documentation and solutions
+
+### How to Use MCPs in Rooster App Development
+- **Fix Build Errors**: Use context7 and sequential-thinking MCPs to generate/fix Jetpack Compose code and debug errors in files like `MainActivity.kt`.
+- **Preview UI**: Use @Preview annotations in Compose, and automate emulator UI tests/screenshots with playwright or steel-puppeteer MCPs.
+- **Lint and Format**: Reference awesome-linters and use tools like ktlint for code quality.
+- **Store Progress**: Use memory-bank MCP to archive fixed code and build logs for future reference.
+- **Validate Data**: Use Back4App dashboard for Parse data, and knowledge-graph-memory MCP for lineage/traceability previews.
+- **Find Documentation**: Use duckduckgo-search MCP to quickly search for solutions to errors or implementation questions.
+- **Get Recommendations**: Use mcp-compass MCP to discover the best MCP for a given task (e.g., UI prototyping, debugging).
+
+### Example Prompts for AI Agents
+- Generate/fix Compose code: `context7` MCP prompt for MainActivity.kt with BottomNavigation and navigation.
+- Automate UI tests: `playwright` or `steel-puppeteer` MCP prompt to click tabs and screenshot screens.
+- Lint code: Use `ktlint` as referenced by awesome-linters.
+- Debug errors: `sequential-thinking` MCP prompt for stepwise build error resolution.
+- Store/retrieve code: `memory-bank` MCP prompt to save MainActivity.kt and logs.
+- Preview data relationships: `knowledge-graph-memory` MCP prompt for fowl lineage.
+- Search for docs: `duckduckgo-search` MCP prompt for Compose navigation errors.
+- Get tool recommendations: `mcp-compass` MCP prompt for UI or debugging tasks.
+
+### Next Steps
+- Review `.config/github-copilot/intellij/mcp.json` for available MCP servers and their descriptions.
+- Use the mapped prompts and tools above to accelerate development, fix errors, and enable robust previews.
+- Continue updating this log after each major feature, config, or workflow change.
+
+---
+
+## [2025-05-23] Data Fetchers (Repositories) Added
+
+### CommunityRepository, FowlRepository, MarketplaceRepository
+- Created `CommunityRepository.kt` to encapsulate Parse queries for fetching and adding community posts.
+- Created `FowlRepository.kt` to encapsulate Parse queries for fetching and adding fowl profiles.
+- Created `MarketplaceRepository.kt` to encapsulate Parse queries for fetching and adding marketplace listings.
+- Each repository provides suspend functions for data access and mutation, improving modularity and testability.
+- Next: Integrate these repositories into their respective Compose screens and refactor UI logic to use them.
