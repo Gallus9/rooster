@@ -285,3 +285,62 @@
 - Created `MarketplaceRepository.kt` to encapsulate Parse queries for fetching and adding marketplace listings.
 - Each repository provides suspend functions for data access and mutation, improving modularity and testability.
 - Next: Integrate these repositories into their respective Compose screens and refactor UI logic to use them.
+
+---
+
+## [2025-05-23] UI Preview Enhancements
+
+### @Preview Annotations Added
+- Added @Preview composables to FowlScreen.kt and MarketplaceScreen.kt to enable instant UI previews in Android Studio.
+- Developers can now use the Preview panel to visually verify and iterate on these screens without running the full app.
+
+### Next Steps
+- Proceed to generate and add multilingual string resources (Telugu, Tamil, Kannada, Hindi) for main UI elements.
+- Update CommunityScreen for image upload UI.
+
+---
+
+## [2025-05-23] Multilingual String Resources
+
+### Localization Added
+- Added main UI string resources in English, Telugu, Tamil, Kannada, and Hindi for all major app features (login, register, share post, add fowl, create listing, tab labels, etc.).
+- Created new strings.xml files in res/values-te, res/values-ta, res/values-kn, and res/values-hi for Telugu, Tamil, Kannada, and Hindi translations.
+- The app is now ready for in-app language switching and localization.
+
+### Next Steps
+- Update CommunityScreen to support image picking and preview for post uploads.
+
+---
+
+## [2025-05-23] Community Post Image Upload
+
+### Feature Added
+- CommunityFeedScreen now supports image uploads: users can pick an image from their device, preview it, and upload it with their post to Parse (Back4App).
+- Integrated ParseFile upload logic; images are attached to posts and stored in the backend.
+- No errors found after code changes.
+
+### Next Steps
+- Display uploaded images in the community feed post list.
+- Continue with Marketplace image upload and verification features.
+
+---
+
+## [2025-05-23] Marketplace Listing Image Upload
+
+### Feature Added
+- MarketplaceScreen now supports image uploads: users can pick an image for their listing, preview it, and upload it to Parse (Back4App).
+- Uploaded images are displayed in the marketplace feed for each listing.
+- No errors found after code changes.
+
+### Next Steps
+- Implement transfer verification for marketplace orders, including UI and backend logic for buyers and sellers to confirm fowl transfers.
+
+---
+
+## [2025-05-23] Transfer Verification Feature
+
+### Feature Added
+- Created Order.kt model for Parse "Order" class (listing, buyer, seller, status fields).
+- Added TransferVerificationScreen.kt: Jetpack Compose UI for buyers/sellers to confirm fowl transfer and call Parse Cloud function to verify transfer.
+- Next: Integrate TransferVerificationScreen into marketplace flow and add Parse Cloud Code for "verifyTransfer" backend logic.
+

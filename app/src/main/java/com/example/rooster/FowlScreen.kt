@@ -12,6 +12,7 @@ import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
 import com.parse.ParseACL
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun FowlScreen() {
@@ -121,3 +122,9 @@ fun FowlScreen() {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun FowlScreenPreview() {
+    // This preview uses default state; for richer previews, mock ParseObject data as needed
+    FowlScreen()
+}

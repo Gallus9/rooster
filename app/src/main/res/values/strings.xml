@@ -6,5 +6,13 @@
     <string name="back4app_client_key">oagUkmeNPCTQZUUD8ENBuM6T2DYPAVyQi2T3LFol</string>
     <string name="parse_app_id">QvZCAlxmMvHYLsJskXreUhOS72OqalGh91mF0W1w</string>
     <string name="parse_rest_api_key">6ipx7hEmYA6RJ06YqJexKdBGSeYJJqpIxKP5aUQ1</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="share_post">Share a post</string>
+    <string name="add_fowl">Add Fowl</string>
+    <string name="create_listing">Create Listing</string>
+    <string name="community_tab">Community</string>
+    <string name="fowl_tab">Fowl</string>
+    <string name="marketplace_tab">Marketplace</string>
 </resources>
 

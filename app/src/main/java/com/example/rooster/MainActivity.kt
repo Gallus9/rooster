@@ -30,6 +30,9 @@ import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Icon
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +56,7 @@ fun isUserLoggedIn(): Boolean {
 
 @Composable
 fun MainContent(onLogout: () -> Unit) {
+    val navController = rememberNavController()
     var selectedScreen by remember { mutableStateOf(0) }
     Scaffold(
         bottomBar = {
@@ -61,36 +65,39 @@ fun MainContent(onLogout: () -> Unit) {
                     icon = { Icon(Icons.Filled.Home, contentDescription = "Community") },
                     label = { Text("Community") },
                     selected = selectedScreen == 0,
-                    onClick = { selectedScreen = 0 }
+                    onClick = { selectedScreen = 0; navController.navigate("community") }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Pets, contentDescription = "Fowl") },
                     label = { Text("Fowl") },
                     selected = selectedScreen == 1,
-                    onClick = { selectedScreen = 1 }
+                    onClick = { selectedScreen = 1; navController.navigate("fowl") }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Store, contentDescription = "Marketplace") },
                     label = { Text("Marketplace") },
                     selected = selectedScreen == 2,
-                    onClick = { selectedScreen = 2 }
+                    onClick = { selectedScreen = 2; navController.navigate("marketplace") }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
                     label = { Text("Profile") },
                     selected = selectedScreen == 3,
-                    onClick = { selectedScreen = 3 }
+                    onClick = { selectedScreen = 3; navController.navigate("profile") }
                 )
             }
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedScreen) {
-                0 -> CommunityFeedScreen()
-                1 -> FowlScreen()
-                2 -> MarketplaceScreen()
-                3 -> ProfileScreen(onLogout = onLogout)
-                else -> CommunityFeedScreen()
+            NavHost(navController = navController, startDestination = "community") {
+                composable("community") { CommunityFeedScreen() }
+                composable("fowl") { FowlScreen() }
+                composable("marketplace") { MarketplaceScreen(navController) }
+                composable("profile") { ProfileScreen(onLogout = onLogout) }
+                composable("transferVerification/{orderId}") { backStackEntry ->
+                    val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+                    TransferVerificationScreen(orderId = orderId, onVerified = { navController.popBackStack() })
+                }
             }
         }
     }

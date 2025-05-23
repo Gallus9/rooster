@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">मुर्गा</string>
+    <string name="login">लॉगिन</string>
+    <string name="register">रजिस्टर</string>
+    <string name="share_post">पोस्ट साझा करें</string>
+    <string name="add_fowl">मुर्गा जोड़ें</string>
+    <string name="create_listing">लिस्टिंग बनाएं</string>
+    <string name="community_tab">समुदाय</string>
+    <string name="fowl_tab">मुर्गा</string>
+    <string name="marketplace_tab">बाजार</string>
+</resources>
+

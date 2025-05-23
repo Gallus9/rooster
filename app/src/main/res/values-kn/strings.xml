@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">ಕೋಳಿ</string>
+    <string name="login">ಲಾಗಿನ್</string>
+    <string name="register">ನೋಂದಣಿ</string>
+    <string name="share_post">ಪೋಸ್ಟ್ ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="add_fowl">ಕೋಳಿಯನ್ನು ಸೇರಿಸಿ</string>
+    <string name="create_listing">ಪಟ್ಟಿಯನ್ನು ರಚಿಸಿ</string>
+    <string name="community_tab">ಸಮುದಾಯ</string>
+    <string name="fowl_tab">ಕೋಳಿ</string>
+    <string name="marketplace_tab">ಮಾರುಕಟ್ಟೆ</string>
+</resources>
+

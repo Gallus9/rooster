@@ -11,6 +11,13 @@ import androidx.compose.ui.unit.dp
 import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import coil.compose.AsyncImage
+import java.io.InputStream
+import com.parse.ParseFile
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun CommunityFeedScreen() {
@@ -18,6 +25,11 @@ fun CommunityFeedScreen() {
     var posts by remember { mutableStateOf(listOf<ParseObject>()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        imageUri = uri
+    }
+    val context = LocalContext.current
 
     fun fetchPosts() {
         loading = true
@@ -43,17 +55,52 @@ fun CommunityFeedScreen() {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = { imagePickerLauncher.launch("image/*") }) {
+                Text("Pick Image")
+            }
+            imageUri?.let {
+                Spacer(modifier = Modifier.width(8.dp))
+                AsyncImage(model = it, contentDescription = "Selected image", modifier = Modifier.size(64.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = {
                 val post = ParseObject("Post")
                 post.put("content", postText)
                 post.put("username", ParseUser.getCurrentUser()?.username ?: "Unknown")
-                post.saveInBackground { e ->
-                    if (e == null) {
-                        postText = ""
-                        fetchPosts()
-                    } else {
-                        error = e.localizedMessage ?: "Failed to post."
+                if (imageUri != null) {
+                    val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri!!)
+                    val bytes = inputStream?.readBytes()
+                    if (bytes != null) {
+                        val parseFile = ParseFile("post_image.jpg", bytes)
+                        parseFile.saveInBackground { e ->
+                            if (e == null) {
+                                post.put("image", parseFile)
+                                post.saveInBackground { e2 ->
+                                    if (e2 == null) {
+                                        postText = ""
+                                        imageUri = null
+                                        fetchPosts()
+                                    } else {
+                                        error = e2.localizedMessage ?: "Failed to post."
+                                    }
+                                }
+                            } else {
+                                error = e.localizedMessage ?: "Failed to upload image."
+                            }
+                        }
+                    }
+                } else {
+                    post.saveInBackground { e ->
+                        if (e == null) {
+                            postText = ""
+                            imageUri = null
+                            fetchPosts()
+                        } else {
+                            error = e.localizedMessage ?: "Failed to post."
+                        }
                     }
                 }
             },
@@ -85,6 +132,11 @@ fun PostCard(post: ParseObject, onLike: () -> Unit) {
             Text(text = post.getString("username") ?: "Unknown", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = post.getString("content") ?: "", style = MaterialTheme.typography.bodyLarge)
+            val imageUrl = post.getParseFile("image")?.url
+            if (imageUrl != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                AsyncImage(model = imageUrl, contentDescription = "Post image", modifier = Modifier.size(120.dp))
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = onLike, modifier = Modifier.align(Alignment.End)) {
                 Text("Like")
@@ -92,5 +144,4 @@ fun PostCard(post: ParseObject, onLike: () -> Unit) {
         }
     }
 }
-
 

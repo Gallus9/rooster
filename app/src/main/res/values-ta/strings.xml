@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">கோழி</string>
+    <string name="login">உள்நுழை</string>
+    <string name="register">பதிவு</string>
+    <string name="share_post">பதிவை பகிரவும்</string>
+    <string name="add_fowl">கோழியைச் சேர்க்கவும்</string>
+    <string name="create_listing">பட்டியலை உருவாக்கவும்</string>
+    <string name="community_tab">சமூகம்</string>
+    <string name="fowl_tab">கோழி</string>
+    <string name="marketplace_tab">சந்தை</string>
+</resources>
+
