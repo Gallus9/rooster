@@ -14,6 +14,67 @@ import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
 
+data class FowlData(
+    val objectId: String,
+    val name: String,
+    val type: String,
+    val birthDate: String,
+    val children: List<FowlData>? = null
+)
+
+@Composable
+fun LineageTree(fowls: List<FowlData>, depth: Int = 0) {
+    Column(modifier = Modifier.padding(start = (depth * 16).dp)) {
+        fowls.forEach { fowl ->
+            Text("└── ${fowl.name} (${fowl.type})")
+            fowl.children?.let { LineageTree(it, depth + 1) }
+        }
+    }
+}
+
+@Composable
+fun FowlCard(fowl: FowlData) {
+    var lineage by remember { mutableStateOf<List<FowlData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(fowl) {
+        isLoading = true
+        lineage = fetchLineage(fowl)
+        isLoading = false
+    }
+
+    Card(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Name: ${fowl.name}")
+            Text("Type: ${fowl.type}")
+            Text("Birth Date: ${fowl.birthDate}")
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                LineageTree(lineage)
+            }
+        }
+    }
+}
+
+suspend fun fetchLineage(fowl: FowlData): List<FowlData> {
+    val lineage = mutableListOf<FowlData>()
+    var currentFowl: ParseObject? = ParseQuery.getQuery<ParseObject>("Fowl").get(fowl.objectId)
+
+    while (currentFowl?.getParseObject("parentId") != null) {
+        val parent = currentFowl.getParseObject("parentId")
+        lineage.add(0, FowlData(
+            objectId = parent?.objectId ?: "",
+            name = parent?.getString("name") ?: "Unknown",
+            type = parent?.getString("type") ?: "Unknown",
+            birthDate = parent?.getString("birthDate") ?: "Unknown"
+        ))
+        currentFowl = parent
+    }
+
+    return lineage
+}
+
 @Composable
 fun FowlScreen() {
     var name by remember { mutableStateOf("") }
@@ -109,13 +170,12 @@ fun FowlScreen() {
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(fowls) { fowl ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Name: ${fowl.getString("name")}")
-                            Text("Type: ${fowl.getString("type")}")
-                            Text("Birth Date: ${fowl.getString("birthDate")}")
-                        }
-                    }
+                    FowlCard(fowl = FowlData(
+                        objectId = fowl.objectId,
+                        name = fowl.getString("name") ?: "Unknown",
+                        type = fowl.getString("type") ?: "Unknown",
+                        birthDate = fowl.getString("birthDate") ?: "Unknown"
+                    ))
                 }
             }
         }

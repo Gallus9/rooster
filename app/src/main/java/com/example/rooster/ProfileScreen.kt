@@ -60,82 +60,50 @@ fun ProfileScreen(onLogout: () -> Unit) {
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else {
+            // Tabbed Layout
             TabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Posts") },
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Fowls") },
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = { Text("Listings") },
-                )
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                    Text("Posts", modifier = Modifier.padding(16.dp))
+                }
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                    Text("Fowls", modifier = Modifier.padding(16.dp))
+                }
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                    Text("Listings", modifier = Modifier.padding(16.dp))
+                }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Display Content Based on Selected Tab
             when (selectedTab) {
-                0 -> {
-                    LazyColumn {
-                        items(userPosts) { post ->
-                            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Post: ${post.getString("content") ?: "No content"}",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                }
+                0 -> LazyColumn {
+                    items(userPosts) { post ->
+                        Card(modifier = Modifier.padding(8.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Post: ${post.getString("content") ?: "No content"}")
+                                Text("Likes: ${post.getInt("likes")}")
                             }
-                        }
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Total Posts: ${userPosts.size}", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
-                1 -> {
-                    LazyColumn {
-                        items(userFowls) { fowl ->
-                            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(text = "Fowl: ${fowl.getString("name") ?: "Unnamed"}", style = MaterialTheme.typography.bodyLarge)
-                                    Text(
-                                        text = "Type: ${fowl.getString("type") ?: "Not specified"}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        text = "Birth Date: ${fowl.getString("birthDate") ?: "Unknown"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
+                1 -> LazyColumn {
+                    items(userFowls) { fowl ->
+                        Card(modifier = Modifier.padding(8.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Fowl: ${fowl.getString("name") ?: "No name"}")
+                                Text("Type: ${fowl.getString("type") ?: "Unknown"}")
                             }
-                        }
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Total Fowls: ${userFowls.size}", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
-                2 -> {
-                    LazyColumn {
-                        items(userListings) { listing ->
-                            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Listing: ${listing.getString("title") ?: "Untitled"}",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                    Text(text = "Price: ${listing.getDouble("price")}", style = MaterialTheme.typography.bodyMedium)
-                                }
+                2 -> LazyColumn {
+                    items(userListings) { listing ->
+                        Card(modifier = Modifier.padding(8.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Listing: ${listing.getString("title") ?: "No title"}")
+                                Text("Price: ${listing.getDouble("price")}")
                             }
-                        }
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Total Listings: ${userListings.size}", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
