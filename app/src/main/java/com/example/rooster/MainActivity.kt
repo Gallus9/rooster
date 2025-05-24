@@ -30,6 +30,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.rooster.ui.theme.RoosterTheme
 import com.parse.ParseUser
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.launch
+import androidx.navigation.NavHostController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,86 +51,143 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RoosterTheme {
-                val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = if (isUserLoggedIn()) "main" else "auth") {
-                    composable("auth") { authScreen(navController) }
-                    composable("main") { MainContent(onLogout = { recreate() }) }
-                    composable("community") { CommunityFeedScreen() }
-                    composable("fowl") { FowlScreen() }
-                    composable("marketplace") { MarketplaceScreen() }
-                    composable("profile") { ProfileScreen(onLogout = { recreate() }) }
-                }
+                RoosterEnthusiastApp()
             }
         }
     }
 }
 
-fun isUserLoggedIn(): Boolean {
-    return ParseUser.getCurrentUser() != null && ParseUser.getCurrentUser().isAuthenticated
-}
-
 @Composable
-fun MainContent(onLogout: () -> Unit) {
-    var selectedScreen by remember { mutableStateOf(0) }
-    Scaffold(
-        bottomBar = { BottomNavigationBar(navController = rememberNavController(), onLogout = onLogout) },
-        modifier = Modifier.fillMaxSize(),
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            val navController2 = rememberNavController()
-            NavHost(navController = navController2, startDestination = "community") {
-                composable("community") { CommunityFeedScreen() }
-                composable("fowl") { FowlScreen() }
-                composable("marketplace") { MarketplaceScreen() }
-                composable("profile") { ProfileScreen(onLogout = onLogout) }
+fun RoosterEnthusiastApp() {
+    val navController = rememberNavController()
+    val coroutineScope = rememberCoroutineScope()
+    var userRole by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        try {
+            val currentUser = ParseUser.getCurrentUser()
+            if (currentUser == null) {
+                navController.navigate("auth")
+            } else {
+                userRole = currentUser.getString("role") ?: "general"
+            }
+        } catch (e: Exception) {
+            error = e.message
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Error fetching user role: ${e.message}")
+            }
+        }
+    }
+
+    userRole?.let { role ->
+        Scaffold(
+            bottomBar = {
+                BottomNavigationBar(navController, role)
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = when (role) {
+                    "general" -> "market"
+                    "farmer" -> "home"
+                    "highLevel" -> "home"
+                    else -> "market"
+                },
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable("auth") { authScreen(navController) }
+                composable("home") {
+                    when (role) {
+                        "farmer" -> FarmerHomeScreen()
+                        "highLevel" -> HighLevelHomeScreen()
+                        else -> Text("Home Screen Not Available for This Role")
+                    }
+                }
+                composable("market") { MarketplaceScreen() }
+                composable("explore") { ExploreScreen() }
+                composable("create") { CommunityFeedScreen() }
+                composable("cart") { CartScreen() }
+                composable("community") { CommunityScreen() }
+                composable("dashboard") { DashboardScreen() }
+                composable("transfers") { TransfersScreen() }
+                composable("profile") { ProfileScreen(onLogout = { navController.navigate("auth") }) }
                 composable("transferVerification/{orderId}") { backStackEntry ->
                     val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-                    TransferVerificationScreen(orderId = orderId, onVerified = { navController2.popBackStack() })
+                    TransferVerificationScreen(orderId = orderId, onVerified = { navController.popBackStack() })
                 }
             }
+        }
+    } ?: run {
+        authScreen(navController)
+    }
+
+    error?.let {
+        LaunchedEffect(it) {
+            snackbarHostState.showSnackbar("Error: $it")
         }
     }
 }
 
 @Composable
-fun BottomNavigationBar(
-    navController: NavController,
-    onLogout: () -> Unit,
-) {
-    NavigationBar {
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Home, contentDescription = "Community") },
-            label = { Text("Community") },
-            selected = true,
-            onClick = {
-                navController.navigate("community")
-            },
+fun BottomNavigationBar(navController: NavHostController, role: String) {
+    val items = when (role) {
+        "general" -> listOf(
+            BottomNavItem("market", "Market", Icons.Filled.Store),
+            BottomNavItem("explore", "Explore", Icons.Filled.Search),
+            BottomNavItem("create", "Create", Icons.Filled.Create),
+            BottomNavItem("cart", "Cart", Icons.Filled.ShoppingCart),
+            BottomNavItem("profile", "Profile", Icons.Filled.Person)
         )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Pets, contentDescription = "Fowl") },
-            label = { Text("Fowl") },
-            selected = false,
-            onClick = {
-                navController.navigate("fowl")
-            },
+        "farmer" -> listOf(
+            BottomNavItem("home", "Home", Icons.Filled.Home),
+            BottomNavItem("market", "Market", Icons.Filled.Store),
+            BottomNavItem("create", "Create", Icons.Filled.Create),
+            BottomNavItem("community", "Community", Icons.Filled.Group),
+            BottomNavItem("profile", "Profile", Icons.Filled.Person)
         )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Store, contentDescription = "Marketplace") },
-            label = { Text("Marketplace") },
-            selected = false,
-            onClick = {
-                navController.navigate("marketplace")
-            },
+        "highLevel" -> listOf(
+            BottomNavItem("home", "Home", Icons.Filled.Home),
+            BottomNavItem("explore", "Explore", Icons.Filled.Search),
+            BottomNavItem("create", "Create", Icons.Filled.Create),
+            BottomNavItem("dashboard", "Dashboard", Icons.Filled.Dashboard),
+            BottomNavItem("transfers", "Transfers", Icons.Filled.SwapHoriz)
         )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
-            label = { Text("Profile") },
-            selected = false,
-            onClick = {
-                navController.navigate("profile")
-            },
-        )
+        else -> emptyList()
     }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    NavigationBar {
+        items.forEach { item ->
+            NavigationBarItem(
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+                selected = currentRoute == item.route,
+                onClick = {
+                    if (currentRoute != item.route) {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
+
+@Composable
+fun FarmerHomeScreen() {
+    Text("Farmer Home Screen - Placeholder (Rankings, Health Tips, Alerts)")
+}
+
+@Composable
+fun HighLevelHomeScreen() {
+    Text("High-Level Home Screen - Placeholder (Rank Board, Flock Board, Alerts)")
 }
 
 @Composable

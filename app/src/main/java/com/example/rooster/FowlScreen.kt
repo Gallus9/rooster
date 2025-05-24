@@ -48,11 +48,44 @@ fun FowlCard(fowl: FowlData) {
             Text("Name: ${fowl.name}")
             Text("Type: ${fowl.type}")
             Text("Birth Date: ${fowl.birthDate}")
+            // Health Records Section
+            HealthRecordsSection(fowlId = fowl.objectId)
             if (isLoading) {
                 CircularProgressIndicator()
             } else {
                 LineageTree(lineage)
             }
+        }
+    }
+}
+
+@Composable
+fun HealthRecordsSection(fowlId: String) {
+    var records by remember { mutableStateOf(listOf<ParseObject>()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(fowlId) {
+        fetchHealthRecords(
+            fowlId = fowlId,
+            onResult = { records = it },
+            onError = { error = it },
+            setLoading = { isLoading = it }
+        )
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text("Health Records:", style = MaterialTheme.typography.titleSmall)
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp))
+        } else if (records.isEmpty()) {
+            Text("No health records.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            records.forEach { record ->
+                Text("${record.getString("date")}: ${record.getString("description")}", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        error?.let {
+            Text("Error: $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

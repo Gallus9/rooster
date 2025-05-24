@@ -6,6 +6,9 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -142,15 +145,23 @@ fun MarketplaceScreen() {
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(listings) { listing ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Title: ${listing.getString("title")}")
-                            Text("Price: ${listing.getString("price")}")
-                            Text("Seller: ${listing.getParseUser("owner")?.username ?: "Unknown"}")
-                            val imageUrl = listing.getParseFile("image")?.url
-                            if (imageUrl != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                AsyncImage(model = imageUrl, contentDescription = "Listing image", modifier = Modifier.size(120.dp))
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Title: ${listing.getString("title")}")
+                                Text("Price: ${listing.getString("price")}")
+                                Text("Seller: ${listing.getParseUser("owner")?.username ?: "Unknown"}")
+                                val imageUrl = listing.getParseFile("image")?.url
+                                imageUrl?.let {
+                                    AsyncImage(model = it, contentDescription = "Listing image", modifier = Modifier.height(120.dp).fillMaxWidth())
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                // Bidding Section
+                                BiddingSection(listingId = listing.objectId)
                             }
                         }
                     }
@@ -210,4 +221,41 @@ private fun compressImage(bitmap: Bitmap): ByteArray? {
     val quality = 80 // 80% quality for JPEG compression
     bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
     return outputStream.toByteArray()
+}
+
+@Composable
+fun BiddingSection(listingId: String) {
+    var bids by remember { mutableStateOf(listOf<ParseObject>()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(listingId) {
+        fetchBids(
+            listingId = listingId,
+            onResult = { bids = it },
+            onError = { error = it },
+            setLoading = { isLoading = it }
+        )
+    }
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Text("Bids:", style = MaterialTheme.typography.titleSmall)
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+            } else if (bids.isEmpty()) {
+                Text("No bids yet.", style = MaterialTheme.typography.bodySmall)
+            } else {
+                bids.forEach { bid ->
+                    Text("${bid.getParseUser("user")?.username ?: "User"}: ${bid.getString("amount")}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            error?.let {
+                Text("Error: $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
 }
