@@ -31,23 +31,23 @@ fun FarmerHomeScreen() {
             fetchAlerts(
                 onResult = { alerts = it },
                 onError = { error = it },
-                setLoading = { isLoading = it }
+                setLoading = { isLoading = it },
             )
             fetchProducts(
                 onResult = { products = it },
                 onError = { error = it },
-                setLoading = { isLoading = it }
+                setLoading = { isLoading = it },
             )
             fetchSocialPosts(
                 onResult = { socialPosts = it },
                 onError = { error = it },
-                setLoading = { isLoading = it }
+                setLoading = { isLoading = it },
             )
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
             Text(text = "Home", style = MaterialTheme.typography.headlineMedium)
@@ -63,12 +63,12 @@ fun FarmerHomeScreen() {
                     Text(
                         text = "Rankings",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.padding(8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -84,12 +84,12 @@ fun FarmerHomeScreen() {
                     Text(
                         text = "Health Tips",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     )
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.padding(8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -105,14 +105,14 @@ fun FarmerHomeScreen() {
                     Text(
                         text = "Alerts",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     )
                 }
                 items(alerts) { alert ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.padding(8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -128,14 +128,14 @@ fun FarmerHomeScreen() {
                     Text(
                         text = "Your Products",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     )
                 }
                 items(products) { product ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.padding(8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -151,14 +151,14 @@ fun FarmerHomeScreen() {
                     Text(
                         text = "Recent Social Posts",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     )
                 }
                 items(socialPosts) { post ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.padding(8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -180,13 +180,15 @@ fun FarmerHomeScreen() {
 }
 
 data class Alert(val message: String, val createdAt: String)
+
 data class Product(val title: String, val price: Int)
+
 data class SocialPost(val username: String, val content: String)
 
 suspend fun fetchAlerts(
     onResult: (List<Alert>) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     setLoading(true)
     try {
@@ -195,11 +197,13 @@ suspend fun fetchAlerts(
         query.orderByDescending("createdAt")
         query.limit = 5
         val results = query.find()
-        onResult(results.mapNotNull {
-            val message = it.getString("message") ?: return@mapNotNull null
-            val createdAt = it.createdAt?.toString() ?: return@mapNotNull null
-            Alert(message, createdAt)
-        })
+        onResult(
+            results.mapNotNull {
+                val message = it.getString("message") ?: return@mapNotNull null
+                val createdAt = it.createdAt?.toString() ?: return@mapNotNull null
+                Alert(message, createdAt)
+            },
+        )
     } catch (e: Exception) {
         onError(e.message)
     } finally {
@@ -210,7 +214,7 @@ suspend fun fetchAlerts(
 suspend fun fetchProducts(
     onResult: (List<Product>) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     setLoading(true)
     try {
@@ -219,11 +223,13 @@ suspend fun fetchProducts(
         query.orderByDescending("createdAt")
         query.limit = 5
         val results = query.find()
-        onResult(results.mapNotNull {
-            val title = it.getString("title") ?: return@mapNotNull null
-            val price = it.getInt("price")
-            Product(title, price)
-        })
+        onResult(
+            results.mapNotNull {
+                val title = it.getString("title") ?: return@mapNotNull null
+                val price = it.getInt("price")
+                Product(title, price)
+            },
+        )
     } catch (e: Exception) {
         onError(e.message)
     } finally {
@@ -234,7 +240,7 @@ suspend fun fetchProducts(
 suspend fun fetchSocialPosts(
     onResult: (List<SocialPost>) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     setLoading(true)
     try {
@@ -243,12 +249,14 @@ suspend fun fetchSocialPosts(
         query.orderByDescending("createdAt")
         query.limit = 5
         val results = query.find()
-        onResult(results.mapNotNull {
-            val user = it.getParseUser("user") ?: return@mapNotNull null
-            val username = user.getString("username") ?: return@mapNotNull null
-            val content = it.getString("content") ?: return@mapNotNull null
-            SocialPost(username, content)
-        })
+        onResult(
+            results.mapNotNull {
+                val user = it.getParseUser("user") ?: return@mapNotNull null
+                val username = user.getString("username") ?: return@mapNotNull null
+                val content = it.getString("content") ?: return@mapNotNull null
+                SocialPost(username, content)
+            },
+        )
     } catch (e: Exception) {
         onError(e.message)
     } finally {

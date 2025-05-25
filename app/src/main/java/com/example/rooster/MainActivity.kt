@@ -4,46 +4,42 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.rooster.ui.theme.RoosterTheme
 import com.parse.ParseUser
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.launch
-import androidx.navigation.NavHostController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,17 +82,18 @@ fun RoosterEnthusiastApp() {
             bottomBar = {
                 BottomNavigationBar(navController, role)
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
+            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = when (role) {
-                    "general" -> "market"
-                    "farmer" -> "home"
-                    "highLevel" -> "home"
-                    else -> "market"
-                },
-                modifier = Modifier.padding(innerPadding)
+                startDestination =
+                    when (role) {
+                        "general" -> "market"
+                        "farmer" -> "home"
+                        "highLevel" -> "home"
+                        else -> "market"
+                    },
+                modifier = Modifier.padding(innerPadding),
             ) {
                 composable("auth") { authScreen(navController) }
                 composable("home") {
@@ -132,31 +129,38 @@ fun RoosterEnthusiastApp() {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController, role: String) {
-    val items = when (role) {
-        "general" -> listOf(
-            BottomNavItem("market", "Market", Icons.Filled.Store),
-            BottomNavItem("explore", "Explore", Icons.Filled.Search),
-            BottomNavItem("create", "Create", Icons.Filled.Create),
-            BottomNavItem("cart", "Cart", Icons.Filled.ShoppingCart),
-            BottomNavItem("profile", "Profile", Icons.Filled.Person)
-        )
-        "farmer" -> listOf(
-            BottomNavItem("home", "Home", Icons.Filled.Home),
-            BottomNavItem("market", "Market", Icons.Filled.Store),
-            BottomNavItem("create", "Create", Icons.Filled.Create),
-            BottomNavItem("community", "Community", Icons.Filled.Group),
-            BottomNavItem("profile", "Profile", Icons.Filled.Person)
-        )
-        "highLevel" -> listOf(
-            BottomNavItem("home", "Home", Icons.Filled.Home),
-            BottomNavItem("explore", "Explore", Icons.Filled.Search),
-            BottomNavItem("create", "Create", Icons.Filled.Create),
-            BottomNavItem("dashboard", "Dashboard", Icons.Filled.Dashboard),
-            BottomNavItem("transfers", "Transfers", Icons.Filled.SwapHoriz)
-        )
-        else -> emptyList()
-    }
+fun BottomNavigationBar(
+    navController: NavHostController,
+    role: String,
+) {
+    val items =
+        when (role) {
+            "general" ->
+                listOf(
+                    BottomNavItem("market", "Market", Icons.Filled.Store),
+                    BottomNavItem("explore", "Explore", Icons.Filled.Search),
+                    BottomNavItem("create", "Create", Icons.Filled.Create),
+                    BottomNavItem("cart", "Cart", Icons.Filled.ShoppingCart),
+                    BottomNavItem("profile", "Profile", Icons.Filled.Person),
+                )
+            "farmer" ->
+                listOf(
+                    BottomNavItem("home", "Home", Icons.Filled.Home),
+                    BottomNavItem("market", "Market", Icons.Filled.Store),
+                    BottomNavItem("create", "Create", Icons.Filled.Create),
+                    BottomNavItem("community", "Community", Icons.Filled.Group),
+                    BottomNavItem("profile", "Profile", Icons.Filled.Person),
+                )
+            "highLevel" ->
+                listOf(
+                    BottomNavItem("home", "Home", Icons.Filled.Home),
+                    BottomNavItem("explore", "Explore", Icons.Filled.Search),
+                    BottomNavItem("create", "Create", Icons.Filled.Create),
+                    BottomNavItem("dashboard", "Dashboard", Icons.Filled.Dashboard),
+                    BottomNavItem("transfers", "Transfers", Icons.Filled.SwapHoriz),
+                )
+            else -> emptyList()
+        }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     NavigationBar {
@@ -172,18 +176,13 @@ fun BottomNavigationBar(navController: NavHostController, role: String) {
                             launchSingleTop = true
                         }
                     }
-                }
+                },
             )
         }
     }
 }
 
 data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
-
-@Composable
-fun FarmerHomeScreen() {
-    Text("Farmer Home Screen - Placeholder (Rankings, Health Tips, Alerts)")
-}
 
 @Composable
 fun HighLevelHomeScreen() {

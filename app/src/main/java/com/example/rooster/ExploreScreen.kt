@@ -10,12 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.input.TextFieldValue
-import com.parse.ParseObject
-import com.parse.ParseQuery
-import coil.compose.rememberAsyncImagePainter
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import kotlinx.coroutines.launch
 
 @Composable
@@ -51,16 +45,17 @@ fun ExploreScreen() {
             value = searchQuery,
             onValueChange = { searchQuery = it },
             label = { Text("Search (@, #, location, name, breed, color,") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentWidth()
-                    .padding(horizontal = 8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .wrapContentWidth()
+                        .padding(horizontal = 8.dp),
             ) {
                 CircularProgressIndicator()
             }
@@ -73,14 +68,14 @@ fun ExploreScreen() {
                     Text(
                         text = "Social Feed",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
                 items(posts) { post ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -96,14 +91,14 @@ fun ExploreScreen() {
                     Text(
                         text = "Showcases",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     )
                 }
                 items(showcases) { showcase ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -119,14 +114,14 @@ fun ExploreScreen() {
                     Text(
                         text = "Promotions",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     )
                 }
                 items(promotions) { promotion ->
                     AnimatedVisibility(
                         visible = true,
                         enter = fadeIn(),
-                        exit = fadeOut()
+                        exit = fadeOut(),
                     ) {
                         Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {

@@ -5,7 +5,11 @@ import com.parse.ParseQuery
 import com.parse.ParseUser
 
 // Fetch notifications/alerts for the current user
-fun fetchNotifications(onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+fun fetchNotifications(
+    onResult: (List<ParseObject>) -> Unit,
+    onError: (String?) -> Unit,
+    setLoading: (Boolean) -> Unit,
+) {
     setLoading(true)
     try {
         val query = ParseQuery.getQuery<ParseObject>("Notification")
@@ -22,7 +26,12 @@ fun fetchNotifications(onResult: (List<ParseObject>) -> Unit, onError: (String?)
 }
 
 // Fetch bids for a given listing
-fun fetchBids(listingId: String, onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+fun fetchBids(
+    listingId: String,
+    onResult: (List<ParseObject>) -> Unit,
+    onError: (String?) -> Unit,
+    setLoading: (Boolean) -> Unit,
+) {
     setLoading(true)
     try {
         val query = ParseQuery.getQuery<ParseObject>("Bid")
@@ -39,7 +48,12 @@ fun fetchBids(listingId: String, onResult: (List<ParseObject>) -> Unit, onError:
 }
 
 // Fetch chat messages for a group or P2P chat
-fun fetchChatMessages(chatId: String, onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+fun fetchChatMessages(
+    chatId: String,
+    onResult: (List<ParseObject>) -> Unit,
+    onError: (String?) -> Unit,
+    setLoading: (Boolean) -> Unit,
+) {
     setLoading(true)
     try {
         val query = ParseQuery.getQuery<ParseObject>("ChatMessage")
@@ -56,7 +70,12 @@ fun fetchChatMessages(chatId: String, onResult: (List<ParseObject>) -> Unit, onE
 }
 
 // Fetch health/medication records for a fowl
-fun fetchHealthRecords(fowlId: String, onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+fun fetchHealthRecords(
+    fowlId: String,
+    onResult: (List<ParseObject>) -> Unit,
+    onError: (String?) -> Unit,
+    setLoading: (Boolean) -> Unit,
+) {
     setLoading(true)
     try {
         val query = ParseQuery.getQuery<ParseObject>("HealthRecord")
@@ -73,7 +92,11 @@ fun fetchHealthRecords(fowlId: String, onResult: (List<ParseObject>) -> Unit, on
 }
 
 // Fetch promotions for the Explore or Market screens
-fun fetchPromotions(onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+fun fetchPromotions(
+    onResult: (List<ParseObject>) -> Unit,
+    onError: (String?) -> Unit,
+    setLoading: (Boolean) -> Unit,
+) {
     setLoading(true)
     try {
         val query = ParseQuery.getQuery<ParseObject>("Promotion")
@@ -87,4 +110,3 @@ fun fetchPromotions(onResult: (List<ParseObject>) -> Unit, onError: (String?) ->
         onError(e.localizedMessage)
     }
 }
-

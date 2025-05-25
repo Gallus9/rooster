@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
-import kotlinx.coroutines.launch
 
 @Composable
 fun DashboardScreen() {
@@ -56,6 +55,7 @@ fun DashboardScreen() {
 }
 
 data class FarmDetails(val name: String, val location: String, val birdCount: Int, val turnover: String)
+
 data class FamilyTreeNode(val objectId: String, val name: String, val relation: String)
 
 @Composable
@@ -71,7 +71,7 @@ fun FamilyTreeNodeCard(node: FamilyTreeNode) {
 fun fetchFarmDetails(
     onResult: (FarmDetails?) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     setLoading(true)
     try {
@@ -87,8 +87,8 @@ fun fetchFarmDetails(
                         name = obj.getString("name") ?: "",
                         location = obj.getString("location") ?: "",
                         birdCount = obj.getInt("birdCount"),
-                        turnover = obj.getString("turnover") ?: ""
-                    )
+                        turnover = obj.getString("turnover") ?: "",
+                    ),
                 )
             } else {
                 onResult(null)
@@ -103,7 +103,7 @@ fun fetchFarmDetails(
 fun fetchFamilyTree(
     onResult: (List<FamilyTreeNode>) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     try {
         val query = ParseQuery.getQuery<ParseObject>("FamilyTreeNode")
@@ -112,13 +112,14 @@ fun fetchFamilyTree(
             if (e != null) {
                 onError(e.localizedMessage)
             } else {
-                val nodes = results?.map {
-                    FamilyTreeNode(
-                        objectId = it.objectId,
-                        name = it.getString("name") ?: "",
-                        relation = it.getString("relation") ?: ""
-                    )
-                } ?: emptyList()
+                val nodes =
+                    results?.map {
+                        FamilyTreeNode(
+                            objectId = it.objectId,
+                            name = it.getString("name") ?: "",
+                            relation = it.getString("relation") ?: "",
+                        )
+                    } ?: emptyList()
                 onResult(nodes)
             }
         }
@@ -126,4 +127,3 @@ fun fetchFamilyTree(
         onError(e.localizedMessage)
     }
 }
-

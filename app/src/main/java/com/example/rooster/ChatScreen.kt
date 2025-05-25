@@ -21,7 +21,7 @@ fun ChatScreen(chatId: String) {
             chatId = chatId,
             onResult = { messages = it },
             onError = { error = it },
-            setLoading = { isLoading = it }
+            setLoading = { isLoading = it },
         )
     }
 
@@ -53,7 +53,7 @@ fun ChatScreen(chatId: String) {
             value = newMessage,
             onValueChange = { newMessage = it },
             label = { Text("Type a message...") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Button(
             onClick = {
@@ -67,21 +67,26 @@ fun ChatScreen(chatId: String) {
                             chatId = chatId,
                             onResult = { messages = it },
                             onError = { error = it },
-                            setLoading = { isLoading = it }
+                            setLoading = { isLoading = it },
                         )
                     },
-                    onError = { error = it }
+                    onError = { error = it },
                 )
             },
             enabled = newMessage.isNotBlank(),
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = 8.dp),
         ) {
             Text("Send")
         }
     }
 }
 
-fun sendChatMessage(chatId: String, message: String, onSuccess: () -> Unit, onError: (String?) -> Unit) {
+fun sendChatMessage(
+    chatId: String,
+    message: String,
+    onSuccess: () -> Unit,
+    onError: (String?) -> Unit,
+) {
     try {
         val chatMessage = ParseObject("ChatMessage")
         chatMessage.put("chatId", chatId)

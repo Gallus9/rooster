@@ -15,17 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.parse.ParseFile
 import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
-import com.parse.ParseException
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -41,9 +38,10 @@ fun CommunityFeedScreen() {
     val errorState = remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        imageUri = uri
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            imageUri = uri
+        }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
@@ -52,7 +50,7 @@ fun CommunityFeedScreen() {
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -60,7 +58,7 @@ fun CommunityFeedScreen() {
                     value = postInput,
                     onValueChange = { postInput = it },
                     modifier = Modifier.weight(1f),
-                    label = { Text("What's on your mind?") }
+                    label = { Text("What's on your mind?") },
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = { launcher.launch("image/*") }) {
@@ -71,7 +69,7 @@ fun CommunityFeedScreen() {
                 AsyncImage(
                     model = it,
                     contentDescription = "Selected image",
-                    modifier = Modifier.size(100.dp)
+                    modifier = Modifier.size(100.dp),
                 )
             }
             Button(onClick = {
@@ -110,7 +108,7 @@ fun CommunityFeedScreen() {
                     } catch (e: Exception) {
                         errorState.value = e.toString()
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Error: ${e.toString()}")
+                            snackbarHostState.showSnackbar("Error: $e")
                         }
                     }
                 }
@@ -121,7 +119,7 @@ fun CommunityFeedScreen() {
                 items(postsState.value, key = { it.objectId }) { post ->
                     AnimatedVisibility(
                         visible = true,
-                        enter = fadeIn()
+                        enter = fadeIn(),
                     ) {
                         PostCard(post, onLike = {
                             coroutineScope.launch {
@@ -136,7 +134,7 @@ fun CommunityFeedScreen() {
                                 } catch (e: Exception) {
                                     errorState.value = e.toString()
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Error liking post: ${e.toString()}")
+                                        snackbarHostState.showSnackbar("Error liking post: $e")
                                     }
                                 }
                             }
@@ -155,7 +153,7 @@ fun CommunityFeedScreen() {
                                 } catch (e: Exception) {
                                     errorState.value = e.toString()
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Error adding comment: ${e.toString()}")
+                                        snackbarHostState.showSnackbar("Error adding comment: $e")
                                     }
                                 }
                             }
@@ -173,7 +171,11 @@ fun CommunityFeedScreen() {
 }
 
 @Composable
-fun PostCard(post: PostData, onLike: () -> Unit, onComment: (String) -> Unit) {
+fun PostCard(
+    post: PostData,
+    onLike: () -> Unit,
+    onComment: (String) -> Unit,
+) {
     var commentInput by remember { mutableStateOf("") }
     Card(modifier = Modifier.padding(8.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -183,7 +185,7 @@ fun PostCard(post: PostData, onLike: () -> Unit, onComment: (String) -> Unit) {
                 AsyncImage(
                     model = it,
                     contentDescription = "Post image",
-                    modifier = Modifier.size(100.dp)
+                    modifier = Modifier.size(100.dp),
                 )
             }
             Row {
@@ -195,7 +197,7 @@ fun PostCard(post: PostData, onLike: () -> Unit, onComment: (String) -> Unit) {
                     value = commentInput,
                     onValueChange = { commentInput = it },
                     label = { Text("Add Comment") },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 Button(onClick = {
                     if (commentInput.isNotBlank()) {
@@ -219,10 +221,14 @@ data class PostData(
     val username: String,
     val imageUrl: String?,
     val likes: Int,
-    val comments: List<String>
+    val comments: List<String>,
 )
 
-fun fetchPosts(posts: MutableState<List<PostData>>, isLoading: MutableState<Boolean>, error: MutableState<String?>) {
+fun fetchPosts(
+    posts: MutableState<List<PostData>>,
+    isLoading: MutableState<Boolean>,
+    error: MutableState<String?>,
+) {
     isLoading.value = true
     try {
         val query = ParseQuery.getQuery<ParseObject>("Post")
@@ -230,14 +236,15 @@ fun fetchPosts(posts: MutableState<List<PostData>>, isLoading: MutableState<Bool
         query.orderByDescending("createdAt")
         query.include("user")
         val results = query.find()
-        posts.value = results.mapNotNull {
-            val content = it.getString("content") ?: return@mapNotNull null
-            val user = it.getParseUser("user")?.username ?: return@mapNotNull null
-            val image = it.getParseFile("image")?.url
-            val likes = it.getInt("likes") ?: 0
-            val comments = it.getList<String>("comments") ?: emptyList()
-            PostData(it.objectId, content, user, image, likes, comments)
-        }
+        posts.value =
+            results.mapNotNull {
+                val content = it.getString("content") ?: return@mapNotNull null
+                val user = it.getParseUser("user")?.username ?: return@mapNotNull null
+                val image = it.getParseFile("image")?.url
+                val likes = it.getInt("likes") ?: 0
+                val comments = it.getList<String>("comments") ?: emptyList()
+                PostData(it.objectId, content, user, image, likes, comments)
+            }
     } catch (e: Exception) {
         error.value = e.toString()
     } finally {
@@ -245,7 +252,10 @@ fun fetchPosts(posts: MutableState<List<PostData>>, isLoading: MutableState<Bool
     }
 }
 
-fun compressImage(context: Context, uri: Uri): ByteArray? {
+fun compressImage(
+    context: Context,
+    uri: Uri,
+): ByteArray? {
     var inputStream: InputStream? = null
     return try {
         inputStream = context.contentResolver.openInputStream(uri)

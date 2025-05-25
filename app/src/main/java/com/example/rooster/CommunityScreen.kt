@@ -31,22 +31,23 @@ fun CommunityScreen() {
             value = newPost,
             onValueChange = { newPost = it },
             label = { Text("Share an update or event...") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Button(
             onClick = {
                 coroutineScope.launch {
-                    postCommunityUpdate(newPost,
+                    postCommunityUpdate(
+                        newPost,
                         onSuccess = {
                             newPost = ""
                             fetchCommunityPosts(onResult = { posts = it }, onError = { error = it }, setLoading = { isLoading = it })
                         },
-                        onError = { error = it }
+                        onError = { error = it },
                     )
                 }
             },
             enabled = newPost.isNotBlank(),
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = 8.dp),
         ) {
             Text("Post")
         }
@@ -84,7 +85,7 @@ fun CommunityPostCard(post: CommunityPost) {
 fun fetchCommunityPosts(
     onResult: (List<CommunityPost>) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     setLoading(true)
     try {
@@ -96,14 +97,15 @@ fun fetchCommunityPosts(
             if (e != null) {
                 onError(e.localizedMessage)
             } else {
-                val items = results?.map {
-                    CommunityPost(
-                        objectId = it.objectId,
-                        content = it.getString("content") ?: "",
-                        author = it.getParseUser("author")?.username ?: "Unknown",
-                        createdAt = it.createdAt?.toString() ?: ""
-                    )
-                } ?: emptyList()
+                val items =
+                    results?.map {
+                        CommunityPost(
+                            objectId = it.objectId,
+                            content = it.getString("content") ?: "",
+                            author = it.getParseUser("author")?.username ?: "Unknown",
+                            createdAt = it.createdAt?.toString() ?: "",
+                        )
+                    } ?: emptyList()
                 onResult(items)
             }
         }
@@ -116,7 +118,7 @@ fun fetchCommunityPosts(
 fun postCommunityUpdate(
     content: String,
     onSuccess: () -> Unit,
-    onError: (String?) -> Unit
+    onError: (String?) -> Unit,
 ) {
     try {
         val post = ParseObject("CommunityPost")
@@ -133,4 +135,3 @@ fun postCommunityUpdate(
         onError(e.localizedMessage)
     }
 }
-

@@ -60,9 +60,9 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     // Parse Android SDK (correct JitPack coordinates, lowercase 'parse')
     implementation("com.github.parse-community.Parse-SDK-Android:parse:1.26.0")
-    implementation("androidx.compose.material:material-icons-extended:1.7.0")
-    implementation("androidx.navigation:navigation-compose:2.8.0")
-    implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.7")
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("io.coil-kt:coil-compose:2.5.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -77,4 +77,6 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0") // Added Accompanist Permissions
 }

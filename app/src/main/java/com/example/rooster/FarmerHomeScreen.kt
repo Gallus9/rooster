@@ -41,4 +41,3 @@ fun FarmerHomeScreen() {
 }
 
 // TODO: Connect rankings, health tips, and alerts to backend (Parse) for dynamic data.
-

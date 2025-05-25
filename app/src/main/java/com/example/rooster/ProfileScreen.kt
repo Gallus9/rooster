@@ -77,36 +77,39 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
             // Display Content Based on Selected Tab
             when (selectedTab) {
-                0 -> LazyColumn {
-                    items(userPosts) { post ->
-                        Card(modifier = Modifier.padding(8.dp)) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Post: ${post.getString("content") ?: "No content"}")
-                                Text("Likes: ${post.getInt("likes")}")
+                0 ->
+                    LazyColumn {
+                        items(userPosts) { post ->
+                            Card(modifier = Modifier.padding(8.dp)) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Post: ${post.getString("content") ?: "No content"}")
+                                    Text("Likes: ${post.getInt("likes")}")
+                                }
                             }
                         }
                     }
-                }
-                1 -> LazyColumn {
-                    items(userFowls) { fowl ->
-                        Card(modifier = Modifier.padding(8.dp)) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Fowl: ${fowl.getString("name") ?: "No name"}")
-                                Text("Type: ${fowl.getString("type") ?: "Unknown"}")
+                1 ->
+                    LazyColumn {
+                        items(userFowls) { fowl ->
+                            Card(modifier = Modifier.padding(8.dp)) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Fowl: ${fowl.getString("name") ?: "No name"}")
+                                    Text("Type: ${fowl.getString("type") ?: "Unknown"}")
+                                }
                             }
                         }
                     }
-                }
-                2 -> LazyColumn {
-                    items(userListings) { listing ->
-                        Card(modifier = Modifier.padding(8.dp)) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Listing: ${listing.getString("title") ?: "No title"}")
-                                Text("Price: ${listing.getDouble("price")}")
+                2 ->
+                    LazyColumn {
+                        items(userListings) { listing ->
+                            Card(modifier = Modifier.padding(8.dp)) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Listing: ${listing.getString("title") ?: "No title"}")
+                                    Text("Price: ${listing.getDouble("price")}")
+                                }
                             }
                         }
                     }
-                }
             }
         }
     }

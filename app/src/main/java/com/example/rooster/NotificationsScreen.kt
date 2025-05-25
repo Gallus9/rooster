@@ -19,7 +19,7 @@ fun NotificationsScreen() {
         fetchNotifications(
             onResult = { notifications = it },
             onError = { error = it },
-            setLoading = { isLoading = it }
+            setLoading = { isLoading = it },
         )
     }
 
@@ -48,4 +48,3 @@ fun NotificationsScreen() {
         }
     }
 }
-

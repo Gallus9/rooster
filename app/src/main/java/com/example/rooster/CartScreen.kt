@@ -38,12 +38,13 @@ fun CartScreen() {
                 items(cartItems, key = { it.objectId }) { item ->
                     CartItemCard(item, onOrder = { itemId ->
                         coroutineScope.launch {
-                            placeOrder(itemId,
+                            placeOrder(
+                                itemId,
                                 onSuccess = {
                                     orderSuccess = true
                                     fetchCartItems(onResult = { cartItems = it }, onError = { error = it }, setLoading = { isLoading = it })
                                 },
-                                onError = { error = it }
+                                onError = { error = it },
                             )
                         }
                     })
@@ -63,11 +64,14 @@ data class CartItem(
     val objectId: String,
     val title: String,
     val price: Int,
-    val seller: String
+    val seller: String,
 )
 
 @Composable
-fun CartItemCard(item: CartItem, onOrder: (String) -> Unit) {
+fun CartItemCard(
+    item: CartItem,
+    onOrder: (String) -> Unit,
+) {
     Card(modifier = Modifier.padding(vertical = 4.dp)) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = "Title: ${item.title}", style = MaterialTheme.typography.bodyLarge)
@@ -75,7 +79,7 @@ fun CartItemCard(item: CartItem, onOrder: (String) -> Unit) {
             Text(text = "Seller: ${item.seller}")
             Button(
                 onClick = { onOrder(item.objectId) },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Text("Place Order")
             }
@@ -86,7 +90,7 @@ fun CartItemCard(item: CartItem, onOrder: (String) -> Unit) {
 fun fetchCartItems(
     onResult: (List<CartItem>) -> Unit,
     onError: (String?) -> Unit,
-    setLoading: (Boolean) -> Unit
+    setLoading: (Boolean) -> Unit,
 ) {
     setLoading(true)
     try {
@@ -99,13 +103,14 @@ fun fetchCartItems(
             if (e != null) {
                 onError(e.localizedMessage)
             } else {
-                val items = results?.mapNotNull {
-                    val listing = it.getParseObject("listing") ?: return@mapNotNull null
-                    val title = listing.getString("title") ?: return@mapNotNull null
-                    val price = listing.getInt("price")
-                    val seller = listing.getParseUser("owner")?.username ?: "Unknown"
-                    CartItem(listing.objectId, title, price, seller)
-                } ?: emptyList()
+                val items =
+                    results?.mapNotNull {
+                        val listing = it.getParseObject("listing") ?: return@mapNotNull null
+                        val title = listing.getString("title") ?: return@mapNotNull null
+                        val price = listing.getInt("price")
+                        val seller = listing.getParseUser("owner")?.username ?: "Unknown"
+                        CartItem(listing.objectId, title, price, seller)
+                    } ?: emptyList()
                 onResult(items)
             }
         }
@@ -118,7 +123,7 @@ fun fetchCartItems(
 fun placeOrder(
     listingId: String,
     onSuccess: () -> Unit,
-    onError: (String?) -> Unit
+    onError: (String?) -> Unit,
 ) {
     try {
         val order = ParseObject("Order")
@@ -136,4 +141,3 @@ fun placeOrder(
         onError(e.localizedMessage)
     }
 }
-

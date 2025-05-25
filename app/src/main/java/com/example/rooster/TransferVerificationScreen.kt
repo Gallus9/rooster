@@ -12,10 +12,12 @@ import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 @Composable
-fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
+fun TransferVerificationScreen(
+    orderId: String,
+    onVerified: () -> Unit,
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -44,7 +46,7 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
             Text(text = "Transfer Verification", style = MaterialTheme.typography.headlineMedium)
@@ -80,13 +82,13 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
                     value = color,
                     onValueChange = { color = it },
                     label = { Text("Confirm Color") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 TextField(
                     value = condition,
                     onValueChange = { condition = it },
                     label = { Text("Confirm Condition") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Button(
@@ -106,12 +108,13 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
                             return@Button
                         }
 
-                        val params = hashMapOf<String, Any>(
-                            "orderId" to orderId,
-                            "color" to color,
-                            "condition" to condition,
-                            "userId" to currentUser.objectId
-                        )
+                        val params =
+                            hashMapOf<String, Any>(
+                                "orderId" to orderId,
+                                "color" to color,
+                                "condition" to condition,
+                                "userId" to currentUser.objectId,
+                            )
 
                         coroutineScope.launch {
                             isLoading = true
@@ -138,7 +141,7 @@ fun TransferVerificationScreen(orderId: String, onVerified: () -> Unit) {
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Confirm Transfer")
                 }
