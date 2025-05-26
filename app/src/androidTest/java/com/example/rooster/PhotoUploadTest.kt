@@ -32,13 +32,14 @@ class PhotoUploadTest {
     @Before
     fun setup() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        
+
         // Create in-memory database for testing
-        testDatabase = Room.inMemoryDatabaseBuilder(
-            context,
-            PhotoUploadDatabase::class.java
-        ).allowMainThreadQueries().build()
-        
+        testDatabase =
+            Room.inMemoryDatabaseBuilder(
+                context,
+                PhotoUploadDatabase::class.java,
+            ).allowMainThreadQueries().build()
+
         testDao = testDatabase.photoUploadDao()
         networkQualityManager = NetworkQualityManager(context)
         photoUploadService = PhotoUploadService(context, networkQualityManager)
@@ -51,7 +52,7 @@ class PhotoUploadTest {
     }
 
     // Core UI Tests
-    
+
     @Test
     fun testPhotoPickerDialogAppears() {
         composeTestRule.setContent {
@@ -87,13 +88,14 @@ class PhotoUploadTest {
 
         runBlocking {
             // Create a properly structured upload request
-            val uploadRequest = SerializablePhotoUploadRequest(
-                uri = mockUri,
-                fileName = "test_photo.jpg",
-                targetParseObjectId = "TEST_FOWL_ID",
-                targetClassName = "Fowl",
-                targetField = "primaryImage"
-            )
+            val uploadRequest =
+                SerializablePhotoUploadRequest(
+                    uri = mockUri,
+                    fileName = "test_photo.jpg",
+                    targetParseObjectId = "TEST_FOWL_ID",
+                    targetClassName = "Fowl",
+                    targetField = "primaryImage",
+                )
             photoUploadService.enqueueUpload(uploadRequest)
         }
 
@@ -131,187 +133,200 @@ class PhotoUploadTest {
     // Room DAO Tests - Core functionality
 
     @Test
-    fun testRoomDaoBasicOperations() = runTest {
-        val testEntity = PhotoUploadEntity(
-            id = "test_123",
-            uriString = "content://test/image.jpg",
-            fileName = "test_image.jpg",
-            targetObjectId = "fowl_123",
-            targetClassName = "Fowl",
-            targetField = "primaryImage",
-            statusName = UploadStatus.PENDING.name
-        )
+    fun testRoomDaoBasicOperations() =
+        runTest {
+            val testEntity =
+                PhotoUploadEntity(
+                    id = "test_123",
+                    uriString = "content://test/image.jpg",
+                    fileName = "test_image.jpg",
+                    targetObjectId = "fowl_123",
+                    targetClassName = "Fowl",
+                    targetField = "primaryImage",
+                    statusName = UploadStatus.PENDING.name,
+                )
 
-        // Test insert
-        testDao.insert(testEntity)
-        
-        // Test retrieve by ID
-        val retrieved = testDao.getById("test_123")
-        assertNotNull(retrieved)
-        assertEquals("test_image.jpg", retrieved!!.fileName)
-        assertEquals(UploadStatus.PENDING.name, retrieved.statusName)
+            // Test insert
+            testDao.insert(testEntity)
 
-        // Test update status
-        testDao.updateStatus("test_123", UploadStatus.UPLOADING.name)
-        val updated = testDao.getById("test_123")
-        assertEquals(UploadStatus.UPLOADING.name, updated!!.statusName)
+            // Test retrieve by ID
+            val retrieved = testDao.getById("test_123")
+            assertNotNull(retrieved)
+            assertEquals("test_image.jpg", retrieved!!.fileName)
+            assertEquals(UploadStatus.PENDING.name, retrieved.statusName)
 
-        // Test delete
-        testDao.delete(testEntity)
-        val deleted = testDao.getById("test_123")
-        assertNull(deleted)
-    }
+            // Test update status
+            testDao.updateStatus("test_123", UploadStatus.UPLOADING.name)
+            val updated = testDao.getById("test_123")
+            assertEquals(UploadStatus.UPLOADING.name, updated!!.statusName)
 
-    @Test
-    fun testRoomDaoRetryLogic() = runTest {
-        val testEntity = PhotoUploadEntity(
-            id = "retry_test_123",
-            uriString = "content://test/retry.jpg",
-            fileName = "retry_test.jpg",
-            targetObjectId = "fowl_retry",
-            targetClassName = "Fowl",
-            targetField = "primaryImage",
-            statusName = UploadStatus.FAILED.name,
-            retryCount = 1
-        )
-
-        testDao.insert(testEntity)
-
-        // Test increment retry count
-        testDao.incrementRetryCount("retry_test_123")
-        val updated = testDao.getById("retry_test_123")
-        assertEquals(2, updated!!.retryCount)
-        assertEquals(UploadStatus.RETRYING.name, updated.statusName)
-
-        // Test retriable requests
-        val retriableRequests = testDao.getRetriableRequests(maxRetries = 3)
-        assertTrue(retriableRequests.any { it.id == "retry_test_123" })
-    }
-
-    @Test
-    fun testRoomDaoBatchOperations() = runTest {
-        // Create multiple test entities
-        val entities = (1..5).map { i ->
-            PhotoUploadEntity(
-                id = "batch_test_$i",
-                uriString = "content://test/batch_$i.jpg",
-                fileName = "batch_test_$i.jpg",
-                targetObjectId = "fowl_$i",
-                targetClassName = "Fowl",
-                targetField = "primaryImage",
-                statusName = UploadStatus.PENDING.name
-            )
+            // Test delete
+            testDao.delete(testEntity)
+            val deleted = testDao.getById("test_123")
+            assertNull(deleted)
         }
 
-        // Insert all entities
-        entities.forEach { testDao.insert(it) }
-
-        // Test getting pending batch
-        val pendingBatch = testDao.getPendingBatch(batchSize = 3)
-        assertEquals(3, pendingBatch.size)
-
-        // Test fresh pending requests
-        val freshPending = testDao.getFreshPendingRequests(limit = 2)
-        assertEquals(2, freshPending.size)
-        assertTrue(freshPending.all { it.retryCount == 0 })
-    }
-
     @Test
-    fun testRoomDaoStatusCounts() = runTest {
-        // Insert entities with different statuses
-        val statuses = listOf(
-            UploadStatus.PENDING,
-            UploadStatus.UPLOADING,
-            UploadStatus.COMPLETED,
-            UploadStatus.FAILED,
-            UploadStatus.PENDING
-        )
+    fun testRoomDaoRetryLogic() =
+        runTest {
+            val testEntity =
+                PhotoUploadEntity(
+                    id = "retry_test_123",
+                    uriString = "content://test/retry.jpg",
+                    fileName = "retry_test.jpg",
+                    targetObjectId = "fowl_retry",
+                    targetClassName = "Fowl",
+                    targetField = "primaryImage",
+                    statusName = UploadStatus.FAILED.name,
+                    retryCount = 1,
+                )
 
-        statuses.forEachIndexed { index, status ->
-            val entity = PhotoUploadEntity(
-                id = "status_test_$index",
-                uriString = "content://test/status_$index.jpg",
-                fileName = "status_test_$index.jpg",
-                statusName = status.name
-            )
-            testDao.insert(entity)
+            testDao.insert(testEntity)
+
+            // Test increment retry count
+            testDao.incrementRetryCount("retry_test_123")
+            val updated = testDao.getById("retry_test_123")
+            assertEquals(2, updated!!.retryCount)
+            assertEquals(UploadStatus.RETRYING.name, updated.statusName)
+
+            // Test retriable requests
+            val retriableRequests = testDao.getRetriableRequests(maxRetries = 3)
+            assertTrue(retriableRequests.any { it.id == "retry_test_123" })
         }
 
-        // Test status counts
-        val pendingCount = testDao.getCountByStatus(UploadStatus.PENDING.name)
-        assertEquals(2, pendingCount)
+    @Test
+    fun testRoomDaoBatchOperations() =
+        runTest {
+            // Create multiple test entities
+            val entities =
+                (1..5).map { i ->
+                    PhotoUploadEntity(
+                        id = "batch_test_$i",
+                        uriString = "content://test/batch_$i.jpg",
+                        fileName = "batch_test_$i.jpg",
+                        targetObjectId = "fowl_$i",
+                        targetClassName = "Fowl",
+                        targetField = "primaryImage",
+                        statusName = UploadStatus.PENDING.name,
+                    )
+                }
 
-        val uploadingCount = testDao.getCountByStatus(UploadStatus.UPLOADING.name)
-        assertEquals(1, uploadingCount)
+            // Insert all entities
+            entities.forEach { testDao.insert(it) }
 
-        val activeCount = testDao.getActiveUploadCount()
-        assertEquals(1, activeCount)
-    }
+            // Test getting pending batch
+            val pendingBatch = testDao.getPendingBatch(batchSize = 3)
+            assertEquals(3, pendingBatch.size)
+
+            // Test fresh pending requests
+            val freshPending = testDao.getFreshPendingRequests(limit = 2)
+            assertEquals(2, freshPending.size)
+            assertTrue(freshPending.all { it.retryCount == 0 })
+        }
 
     @Test
-    fun testRoomDaoProgressUpdates() = runTest {
-        val testEntity = PhotoUploadEntity(
-            id = "progress_test",
-            uriString = "content://test/progress.jpg",
-            fileName = "progress_test.jpg",
-            statusName = UploadStatus.UPLOADING.name,
-            progress = 0
-        )
+    fun testRoomDaoStatusCounts() =
+        runTest {
+            // Insert entities with different statuses
+            val statuses =
+                listOf(
+                    UploadStatus.PENDING,
+                    UploadStatus.UPLOADING,
+                    UploadStatus.COMPLETED,
+                    UploadStatus.FAILED,
+                    UploadStatus.PENDING,
+                )
 
-        testDao.insert(testEntity)
+            statuses.forEachIndexed { index, status ->
+                val entity =
+                    PhotoUploadEntity(
+                        id = "status_test_$index",
+                        uriString = "content://test/status_$index.jpg",
+                        fileName = "status_test_$index.jpg",
+                        statusName = status.name,
+                    )
+                testDao.insert(entity)
+            }
 
-        // Test progress update
-        testDao.updateProgress("progress_test", 50)
-        val updated = testDao.getById("progress_test")
-        assertEquals(50, updated!!.progress)
+            // Test status counts
+            val pendingCount = testDao.getCountByStatus(UploadStatus.PENDING.name)
+            assertEquals(2, pendingCount)
 
-        // Test parse file URL update
-        testDao.updateWithParseFileUrl("progress_test", "https://parse.com/file.jpg")
-        val completed = testDao.getById("progress_test")
-        assertEquals("https://parse.com/file.jpg", completed!!.parseFileUrl)
-        assertEquals(UploadStatus.COMPLETED.name, completed.statusName)
-    }
+            val uploadingCount = testDao.getCountByStatus(UploadStatus.UPLOADING.name)
+            assertEquals(1, uploadingCount)
+
+            val activeCount = testDao.getActiveUploadCount()
+            assertEquals(1, activeCount)
+        }
 
     @Test
-    fun testRoomDaoClearOperations() = runTest {
-        // Insert entities with different statuses for cleanup testing
-        val entities = listOf(
-            PhotoUploadEntity(
-                id = "clear_1", 
-                uriString = "content://test/clear_1.jpg",
-                fileName = "clear_1.jpg", 
-                statusName = UploadStatus.COMPLETED.name
-            ),
-            PhotoUploadEntity(
-                id = "clear_2", 
-                uriString = "content://test/clear_2.jpg",
-                fileName = "clear_2.jpg", 
-                statusName = UploadStatus.FAILED.name
-            ),
-            PhotoUploadEntity(
-                id = "clear_3", 
-                uriString = "content://test/clear_3.jpg",
-                fileName = "clear_3.jpg", 
-                statusName = UploadStatus.CANCELLED.name
-            ),
-            PhotoUploadEntity(
-                id = "clear_4", 
-                uriString = "content://test/clear_4.jpg",
-                fileName = "clear_4.jpg", 
-                statusName = UploadStatus.PENDING.name
-            )
-        )
+    fun testRoomDaoProgressUpdates() =
+        runTest {
+            val testEntity =
+                PhotoUploadEntity(
+                    id = "progress_test",
+                    uriString = "content://test/progress.jpg",
+                    fileName = "progress_test.jpg",
+                    statusName = UploadStatus.UPLOADING.name,
+                    progress = 0,
+                )
 
-        entities.forEach { testDao.insert(it) }
+            testDao.insert(testEntity)
 
-        // Test clear completed
-        testDao.clearCompleted()
-        
-        // Only pending should remain
-        val remaining = testDao.getPendingRequests()
-        assertEquals(1, remaining.size)
-        assertEquals("clear_4", remaining.first().id)
-    }
+            // Test progress update
+            testDao.updateProgress("progress_test", 50)
+            val updated = testDao.getById("progress_test")
+            assertEquals(50, updated!!.progress)
+
+            // Test parse file URL update
+            testDao.updateWithParseFileUrl("progress_test", "https://parse.com/file.jpg")
+            val completed = testDao.getById("progress_test")
+            assertEquals("https://parse.com/file.jpg", completed!!.parseFileUrl)
+            assertEquals(UploadStatus.COMPLETED.name, completed.statusName)
+        }
+
+    @Test
+    fun testRoomDaoClearOperations() =
+        runTest {
+            // Insert entities with different statuses for cleanup testing
+            val entities =
+                listOf(
+                    PhotoUploadEntity(
+                        id = "clear_1",
+                        uriString = "content://test/clear_1.jpg",
+                        fileName = "clear_1.jpg",
+                        statusName = UploadStatus.COMPLETED.name,
+                    ),
+                    PhotoUploadEntity(
+                        id = "clear_2",
+                        uriString = "content://test/clear_2.jpg",
+                        fileName = "clear_2.jpg",
+                        statusName = UploadStatus.FAILED.name,
+                    ),
+                    PhotoUploadEntity(
+                        id = "clear_3",
+                        uriString = "content://test/clear_3.jpg",
+                        fileName = "clear_3.jpg",
+                        statusName = UploadStatus.CANCELLED.name,
+                    ),
+                    PhotoUploadEntity(
+                        id = "clear_4",
+                        uriString = "content://test/clear_4.jpg",
+                        fileName = "clear_4.jpg",
+                        statusName = UploadStatus.PENDING.name,
+                    ),
+                )
+
+            entities.forEach { testDao.insert(it) }
+
+            // Test clear completed
+            testDao.clearCompleted()
+
+            // Only pending should remain
+            val remaining = testDao.getPendingRequests()
+            assertEquals(1, remaining.size)
+            assertEquals("clear_4", remaining.first().id)
+        }
 
     // Basic Network Quality Test
 
@@ -319,11 +334,11 @@ class PhotoUploadTest {
     fun testNetworkQualityDetection() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val networkManager = NetworkQualityManager(context)
-        
+
         // Test that network quality can be detected
         val quality = networkManager.getCurrentNetworkQuality()
         assertNotNull(quality)
-        
+
         // Quality should be one of the enum values
         assertTrue(quality in NetworkQualityLevel.values())
     }
@@ -331,21 +346,23 @@ class PhotoUploadTest {
     // Error Handling
 
     @Test
-    fun testInvalidUriHandling() = runTest {
-        val invalidEntity = PhotoUploadEntity(
-            id = "invalid_test",
-            uriString = "invalid://uri",
-            fileName = "invalid.jpg",
-            statusName = UploadStatus.PENDING.name
-        )
+    fun testInvalidUriHandling() =
+        runTest {
+            val invalidEntity =
+                PhotoUploadEntity(
+                    id = "invalid_test",
+                    uriString = "invalid://uri",
+                    fileName = "invalid.jpg",
+                    statusName = UploadStatus.PENDING.name,
+                )
 
-        testDao.insert(invalidEntity)
-        
-        // Service should handle invalid URIs gracefully
-        val retrieved = testDao.getById("invalid_test")
-        assertNotNull(retrieved)
-        assertEquals("invalid://uri", retrieved!!.uriString)
-    }
+            testDao.insert(invalidEntity)
+
+            // Service should handle invalid URIs gracefully
+            val retrieved = testDao.getById("invalid_test")
+            assertNotNull(retrieved)
+            assertEquals("invalid://uri", retrieved!!.uriString)
+        }
 
     @Test
     fun testServiceInitialization() {
@@ -353,7 +370,7 @@ class PhotoUploadTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val networkManager = NetworkQualityManager(context)
         val service = PhotoUploadService(context, networkManager)
-        
+
         assertNotNull(service)
         service.shutdown()
     }
@@ -390,20 +407,21 @@ class PhotoUploadIntegrationTest {
 
         // Simulate photo selection and upload
         val mockUri = Uri.parse("content://media/external/images/media/test")
-        
+
         runBlocking {
-            val uploadRequest = SerializablePhotoUploadRequest(
-                uri = mockUri,
-                fileName = "integration_test.jpg",
-                targetParseObjectId = "TEST_FOWL_ID",
-                targetClassName = "Fowl",
-                targetField = "primaryImage"
-            )
+            val uploadRequest =
+                SerializablePhotoUploadRequest(
+                    uri = mockUri,
+                    fileName = "integration_test.jpg",
+                    targetParseObjectId = "TEST_FOWL_ID",
+                    targetClassName = "Fowl",
+                    targetField = "primaryImage",
+                )
             photoUploadService.enqueueUpload(uploadRequest)
         }
 
         composeTestRule.waitForIdle()
-        
+
         // Verify upload UI appears
         composeTestRule
             .onNodeWithText("Upload Queue")
@@ -413,25 +431,26 @@ class PhotoUploadIntegrationTest {
     @Test
     fun testOfflineUploadQueue() {
         val mockUri = Uri.parse("content://media/external/images/media/offline_test")
-        
+
         runBlocking {
-            val uploadRequest = SerializablePhotoUploadRequest(
-                uri = mockUri,
-                fileName = "offline_test.jpg",
-                targetParseObjectId = "OFFLINE_FOWL_ID",
-                targetClassName = "Fowl",
-                targetField = "primaryImage"
-            )
+            val uploadRequest =
+                SerializablePhotoUploadRequest(
+                    uri = mockUri,
+                    fileName = "offline_test.jpg",
+                    targetParseObjectId = "OFFLINE_FOWL_ID",
+                    targetClassName = "Fowl",
+                    targetField = "primaryImage",
+                )
             photoUploadService.enqueueUpload(uploadRequest)
         }
-        
+
         // Verify upload is queued
         composeTestRule.setContent {
             PhotoUploadComponentsDemoScreen(photoUploadService, networkQualityManager)
         }
-        
+
         composeTestRule.waitForIdle()
-        
+
         composeTestRule
             .onNodeWithText("Upload Queue")
             .assertIsDisplayed()

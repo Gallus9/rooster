@@ -763,19 +763,20 @@ fun PhotoUploadComponentsDemoScreen(
                                 try {
                                     // Find original URI from the grid or use a placeholder
                                     val originalUri = urisToDisplayInGrid.firstOrNull() ?: Uri.EMPTY
-                                    
+
                                     // Create properly aligned SerializablePhotoUploadRequest
-                                    val retryRequest = SerializablePhotoUploadRequest(
-                                        id = UUID.randomUUID().toString(),
-                                        uri = originalUri,
-                                        fileName = "retry_upload_${System.currentTimeMillis()}.jpg",
-                                        targetParseObjectId = "RETRY_TARGET_ID",
-                                        targetClassName = "Fowl", // Use actual class name
-                                        targetField = "photoField",
-                                        status = UploadStatus.PENDING,
-                                        progress = 0,
-                                        retryCount = 0
-                                    )
+                                    val retryRequest =
+                                        SerializablePhotoUploadRequest(
+                                            id = UUID.randomUUID().toString(),
+                                            uri = originalUri,
+                                            fileName = "retry_upload_${System.currentTimeMillis()}.jpg",
+                                            targetParseObjectId = "RETRY_TARGET_ID",
+                                            targetClassName = "Fowl", // Use actual class name
+                                            targetField = "photoField",
+                                            status = UploadStatus.PENDING,
+                                            progress = 0,
+                                            retryCount = 0,
+                                        )
                                     photoUploadService.enqueueUpload(retryRequest)
                                 } catch (e: Exception) {
                                     FirebaseCrashlytics.getInstance().recordException(e)
@@ -812,19 +813,20 @@ fun PhotoUploadComponentsDemoScreen(
                 onConfirm = { confirmedUri ->
                     scope.launch {
                         // Create properly aligned SerializablePhotoUploadRequest for 5% completion
-                        val uploadRequest = SerializablePhotoUploadRequest(
-                            id = UUID.randomUUID().toString(),
-                            uri = confirmedUri,
-                            fileName = "demo_upload_${System.currentTimeMillis()}.jpg",
-                            targetParseObjectId = "DEMO_FOWL_ID", // Align with actual Parse object
-                            targetClassName = "Fowl", // Use actual Parse class name
-                            targetField = "primaryImage", // Use actual field name
-                            status = UploadStatus.PENDING,
-                            progress = 0,
-                            retryCount = 0,
-                            errorMessage = null,
-                            parseFileUrl = null
-                        )
+                        val uploadRequest =
+                            SerializablePhotoUploadRequest(
+                                id = UUID.randomUUID().toString(),
+                                uri = confirmedUri,
+                                fileName = "demo_upload_${System.currentTimeMillis()}.jpg",
+                                targetParseObjectId = "DEMO_FOWL_ID", // Align with actual Parse object
+                                targetClassName = "Fowl", // Use actual Parse class name
+                                targetField = "primaryImage", // Use actual field name
+                                status = UploadStatus.PENDING,
+                                progress = 0,
+                                retryCount = 0,
+                                errorMessage = null,
+                                parseFileUrl = null,
+                            )
                         photoUploadService.enqueueUpload(uploadRequest)
                     }
                     selectedUriForPreview = null

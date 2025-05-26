@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -76,9 +77,9 @@ fun RoosterEnthusiastApp() {
             val currentUser = ParseUser.getCurrentUser()
             if (currentUser == null) {
                 isCheckingAuth = false
-                // User not logged in, will show auth screen
+                // User not logged in, will show auth screen via the null userRole check later
             } else {
-                userRole = currentUser.getString("role") ?: "general"
+                userRole = currentUser.getString("role") ?: "general" // Default to general if no role
                 isCheckingAuth = false
             }
         } catch (e: Exception) {
@@ -104,87 +105,72 @@ fun RoosterEnthusiastApp() {
         return
     }
 
-    userRole?.let { role ->
-        Scaffold(
-            bottomBar = {
-                BottomNavigationBar(navController, role)
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination =
-                    when (role) {
-                        "general" -> "market"
-                        "farmer" -> "home"
-                        "highLevel" -> "home"
-                        else -> "market"
-                    },
-                modifier = Modifier.padding(innerPadding),
-            ) {
-                composable("auth") { authScreen(navController) }
-                composable("main") {
-                    // Redirect to appropriate home based on role
-                    LaunchedEffect(Unit) {
-                        val destination =
-                            when (role) {
-                                "general" -> "market"
-                                "farmer" -> "home"
-                                "highLevel" -> "home"
-                                else -> "market"
+    // Determine start destination outside NavHost for clarity
+    val startDestination = when (userRole) {
+        "farmer" -> "home"
+        "highLevel" -> "home"
+        "general" -> "market"
+        else -> "auth" // Default to auth if role is null (not logged in) or unknown
+    }
+
+    Scaffold(
+        bottomBar = {
+            // Only show bottom nav if a user role is determined and it's not the auth screen
+            if (userRole != null && startDestination != "auth") {
+                BottomNavigationBar(navController, userRole!!)
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            composable("auth") { authScreen(navController) } // Ensure authScreen is defined elsewhere
+            
+            composable("home") {
+                // This screen should now only be reached if userRole is "farmer" or "highLevel"
+                // as per the startDestination logic.
+                when (userRole) {
+                    "farmer" -> FarmerHomeScreen() // Ensure FarmerHomeScreen is defined
+                    "highLevel" -> HighLevelHomeScreen() // Ensure HighLevelHomeScreen is defined
+                    else -> {
+                        // This case should ideally not be reached if startDestination is correct.
+                        // Fallback or error screen, or navigate to auth if role somehow becomes null.
+                        LaunchedEffect(Unit) {
+                            navController.navigate("auth") {
+                                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                             }
-                        navController.navigate(destination) {
-                            popUpTo("main") { inclusive = true }
                         }
                     }
-                }
-                composable("home") {
-                    when (role) {
-                        "farmer" -> FarmerHomeScreen()
-                        "highLevel" -> HighLevelHomeScreen()
-                        else ->
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp),
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text("Home Screen Not Available for This Role")
-                                Button(onClick = { navController.navigate("market") }) {
-                                    Text("Go to Market")
-                                }
-                            }
-                    }
-                }
-                composable("market") { MarketplaceScreen() }
-                composable("explore") { ExploreScreen() }
-                composable("create") { CommunityFeedScreen() }
-                composable("cart") { CartScreen() }
-                composable("community") { CommunityScreen() }
-                composable("dashboard") { DashboardScreen() }
-                composable("transfers") { TransfersScreen() }
-                composable("profile") {
-                    ProfileScreen(onLogout = {
-                        ParseUser.logOut()
-                        navController.navigate("auth") {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    })
-                }
-                composable("transferVerification/{orderId}") { backStackEntry ->
-                    val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-                    TransferVerificationScreen(
-                        orderId = orderId,
-                        onVerified = { navController.popBackStack() },
-                    )
                 }
             }
+            composable("market") { MarketplaceScreen() } // Ensure MarketplaceScreen is defined
+            composable("explore") { ExploreScreen() } // Ensure ExploreScreen is defined
+            composable("create") { CommunityFeedScreen() } // Ensure CommunityFeedScreen is defined
+            composable("cart") { CartScreen() } // Ensure CartScreen is defined
+            composable("community") { CommunityScreen() } // Ensure CommunityScreen is defined
+            composable("dashboard") { DashboardScreen() } // Ensure DashboardScreen is defined
+            composable("transfers") { TransfersScreen() } // Ensure TransfersScreen is defined
+            composable("profile") {
+                ProfileScreen(onLogout = {
+                    ParseUser.logOut()
+                    userRole = null // Clear role on logout
+                    navController.navigate("auth") {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                    }
+                })
+            }
+            composable("transferVerification/{orderId}") { backStackEntry ->
+                val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+                TransferVerificationScreen(
+                    orderId = orderId,
+                    onVerified = { navController.popBackStack() },
+                ) // Ensure TransferVerificationScreen is defined
+            }
+            // Removed the problematic "main" composable route
         }
-    } ?: run {
-        // User not logged in, show auth screen
-        authScreen(navController)
     }
 
     error?.let {
