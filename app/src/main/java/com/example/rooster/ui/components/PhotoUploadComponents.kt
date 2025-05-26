@@ -32,6 +32,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.rooster.* // Import all from base package for enums and data classes
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
@@ -757,25 +758,27 @@ fun PhotoUploadComponentsDemoScreen(
                     UploadProgressIndicator(
                         uploadResult = result,
                         onRetry = { requestId ->
-                            // Enhanced retry with proper request reconstruction
+                            // Enhanced retry with proper request reconstruction using updated data models
                             scope.launch {
                                 try {
-                                    // Find original request from database or reconstruct
-                                    val originalRequest =
-                                        SerializablePhotoUploadRequest(
-                                            id = UUID.randomUUID().toString(),
-                                            uri =
-                                                urisToDisplayInGrid.firstOrNull()
-                                                    ?: Uri.EMPTY,
-                                            // Simplified
-                                            fileName = "retry_upload_${System.currentTimeMillis()}.jpg",
-                                            targetParseObjectId = "RETRY_TARGET_ID",
-                                            targetClassName = "RETRY_CLASS_NAME",
-                                            targetField = "photoField",
-                                        )
-                                    photoUploadService.enqueueUpload(originalRequest)
+                                    // Find original URI from the grid or use a placeholder
+                                    val originalUri = urisToDisplayInGrid.firstOrNull() ?: Uri.EMPTY
+                                    
+                                    // Create properly aligned SerializablePhotoUploadRequest
+                                    val retryRequest = SerializablePhotoUploadRequest(
+                                        id = UUID.randomUUID().toString(),
+                                        uri = originalUri,
+                                        fileName = "retry_upload_${System.currentTimeMillis()}.jpg",
+                                        targetParseObjectId = "RETRY_TARGET_ID",
+                                        targetClassName = "Fowl", // Use actual class name
+                                        targetField = "photoField",
+                                        status = UploadStatus.PENDING,
+                                        progress = 0,
+                                        retryCount = 0
+                                    )
+                                    photoUploadService.enqueueUpload(retryRequest)
                                 } catch (e: Exception) {
-                                    // Handle retry error
+                                    FirebaseCrashlytics.getInstance().recordException(e)
                                 }
                             }
                         },
@@ -808,16 +811,21 @@ fun PhotoUploadComponentsDemoScreen(
                 uri = it,
                 onConfirm = { confirmedUri ->
                     scope.launch {
-                        val requestDto =
-                            SerializablePhotoUploadRequest(
-                                id = UUID.randomUUID().toString(),
-                                uri = confirmedUri,
-                                fileName = "demo_upload_${System.currentTimeMillis()}.jpg",
-                                targetParseObjectId = "DEMO_TARGET_ID",
-                                targetClassName = "DEMO_CLASS_NAME",
-                                targetField = "photoField",
-                            )
-                        photoUploadService.enqueueUpload(requestDto)
+                        // Create properly aligned SerializablePhotoUploadRequest for 5% completion
+                        val uploadRequest = SerializablePhotoUploadRequest(
+                            id = UUID.randomUUID().toString(),
+                            uri = confirmedUri,
+                            fileName = "demo_upload_${System.currentTimeMillis()}.jpg",
+                            targetParseObjectId = "DEMO_FOWL_ID", // Align with actual Parse object
+                            targetClassName = "Fowl", // Use actual Parse class name
+                            targetField = "primaryImage", // Use actual field name
+                            status = UploadStatus.PENDING,
+                            progress = 0,
+                            retryCount = 0,
+                            errorMessage = null,
+                            parseFileUrl = null
+                        )
+                        photoUploadService.enqueueUpload(uploadRequest)
                     }
                     selectedUriForPreview = null
                 },
