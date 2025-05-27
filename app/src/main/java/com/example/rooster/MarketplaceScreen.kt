@@ -8,38 +8,37 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.* 
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.parse.ParseFile
 import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
-import com.parse.SaveCallback
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,24 +48,11 @@ fun MarketplaceScreen() {
         listOf("Digital Market", "Traditional Markets", "Pre-Orders", "Group Buying", "Trends")
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Enhanced Tab Row with Traditional Market Integration
-        TabRow(
+        com.example.rooster.ui.components.MarketplaceTabRow(
             selectedTabIndex = currentTab,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = currentTab == index,
-                    onClick = { currentTab = index },
-                    text = {
-                        Text(
-                            text = title,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                        )
-                    },
-                )
-            }
-        }
+            onTabSelected = { currentTab = it },
+            tabs = tabs
+        )
 
         // Tab Content
         when (currentTab) {
@@ -88,6 +74,8 @@ fun DigitalMarketplaceTab() {
     var error by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var digitalEvents by remember { mutableStateOf(listOf<DigitalMarketEvent>()) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val marketService = remember { TraditionalMarketService() }
     val imagePickerLauncher =
@@ -111,51 +99,109 @@ fun DigitalMarketplaceTab() {
     }
 
     fun addListing() {
+        val currentUser = ParseUser.getCurrentUser()
+        if (currentUser == null) {
+            error = "User not logged in. Please log in again."
+            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+            return
+        }
+    
+        if (title.isBlank() || price.isBlank()) {
+            error = "Title and Price cannot be empty."
+            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+            return
+        }
+    
+        loading = true
+    
         val listing = ParseObject("Listing")
         listing.put("title", title)
-        listing.put("price", price)
-        listing.put("owner", ParseUser.getCurrentUser())
+        try {
+            listing.put("price", price.toDouble())
+        } catch (e: NumberFormatException) {
+            error = "Invalid price format. Please enter a number."
+            loading = false
+            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+            return
+        }
+        listing.put("owner", currentUser)
+    
         if (imageUri != null) {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri!!)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            val compressedBytes = compressImage(bitmap)
-            if (compressedBytes != null) {
-                val parseFile = ParseFile("listing_image.jpg", compressedBytes)
-                parseFile.saveInBackground(
-                    SaveCallback { e ->
+            try {
+                context.contentResolver.openInputStream(imageUri!!)?.use { inputStream ->
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    if (bitmap == null) {
+                        error = "Failed to decode image. Please try a different image."
+                        loading = false
+                        coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                        return@addListing
+                    }
+    
+                    val compressedBytes = compressImage(bitmap)
+                    if (compressedBytes == null) {
+                        error = "Failed to compress image."
+                        loading = false
+                        coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                        return@addListing
+                    }
+    
+                    if (compressedBytes.size > 10 * 1024 * 1024) {
+                         error = "Image is too large even after compression (max 10MB)."
+                         loading = false
+                         coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                         return@addListing
+                    }
+    
+                    val parseFile = ParseFile("listing_image.jpg", compressedBytes)
+                    parseFile.saveInBackground { e: com.parse.ParseException? ->
                         if (e == null) {
                             listing.put("image", parseFile)
-                            listing.saveInBackground(
-                                SaveCallback { e2 ->
-                                    if (e2 == null) {
-                                        title = ""
-                                        price = ""
-                                        imageUri = null
-                                        fetchListings()
-                                    } else {
-                                        error = (e2 as? com.parse.ParseException)?.localizedMessage ?: "Failed to add listing."
-                                    }
-                                },
-                            )
+                            listing.saveInBackground { e2: com.parse.ParseException? ->
+                                loading = false
+                                if (e2 == null) {
+                                    title = ""
+                                    price = ""
+                                    imageUri = null
+                                    fetchListings()
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Listing added successfully!") }
+                                } else {
+                                    error = e2.localizedMessage ?: "Failed to save listing details."
+                                    FirebaseCrashlytics.getInstance().recordException(e2)
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                                }
+                            }
                         } else {
-                            error = (e as? com.parse.ParseException)?.localizedMessage ?: "Failed to upload image."
+                            loading = false
+                            error = e.localizedMessage ?: "Failed to upload image."
+                            FirebaseCrashlytics.getInstance().recordException(e)
+                            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
                         }
-                    },
-                )
+                    }
+                } ?: run {
+                    error = "Failed to open image stream. Please select image again."
+                    loading = false
+                    coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                }
+            } catch (e: Exception) {
+                loading = false
+                error = "An error occurred with the image: ${e.localizedMessage ?: "Unknown image error"}"
+                FirebaseCrashlytics.getInstance().recordException(e)
+                coroutineScope.launch { snackbarHostState.showSnackbar(error) }
             }
         } else {
-            listing.saveInBackground(
-                SaveCallback { e ->
-                    if (e == null) {
-                        title = ""
-                        price = ""
-                        imageUri = null
-                        fetchListings()
-                    } else {
-                        error = (e as? com.parse.ParseException)?.localizedMessage ?: "Failed to add listing."
-                    }
-                },
-            )
+            listing.saveInBackground { e: com.parse.ParseException? ->
+                loading = false
+                if (e == null) {
+                    title = ""
+                    price = ""
+                    fetchListings()
+                    coroutineScope.launch { snackbarHostState.showSnackbar("Listing added successfully (no image)!") }
+                } else {
+                    error = e.localizedMessage ?: "Failed to add listing without image."
+                    FirebaseCrashlytics.getInstance().recordException(e)
+                    coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                }
+            }
         }
     }
 
@@ -1393,8 +1439,64 @@ fun BiddingSection(listingId: String) {
 }
 
 private fun compressImage(bitmap: Bitmap): ByteArray? {
-    val outputStream = ByteArrayOutputStream()
-    val quality = 80 // 80% quality for JPEG compression
-    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
-    return outputStream.toByteArray()
+    return try {
+        val outputStream = ByteArrayOutputStream()
+        // Adjusted quality based on previous log. For 2G, it was 20%. Let's keep it higher for general listings for now.
+        val quality = 75 
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        if (!bitmap.isRecycled) {
+            bitmap.recycle() // Ensure bitmap is recycled after compression
+        }
+        outputStream.toByteArray()
+    } catch (e: Exception) {
+        FirebaseCrashlytics.getInstance().recordException(RuntimeException("Image compression failed: ${e.message}", e))
+        null
+    }
+}
+
+// Dummy object for TraditionalMarketService for compilation. Replace with actual implementation.
+object TraditionalMarketService {
+    fun fetchActiveDigitalMarketEvents(onResult: (List<DigitalMarketEvent>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchTraditionalMarkets(region: String, onResult: (List<TraditionalMarket>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchMarketCalendar(startDate: Date, endDate: Date, onResult: (List<MarketCalendarEntry>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchPreMarketOrders(onResult: (List<PreMarketOrder>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchGroupBuyingRequests(onResult: (List<GroupBuyingRequest>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+}
+
+// Define or import fetchBids if not already present
+fun fetchBids(listingId: String, onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+    // Placeholder - implement actual Parse query
+    setLoading(true)
+    val query = ParseQuery.getQuery<ParseObject>("Bid") // Assuming "Bid" class
+    query.whereEqualTo("listingId", listingId)
+    query.include("user") // Include user data for username
+    query.orderByDescending("createdAt")
+    query.findInBackground { bids, e ->
+        setLoading(false)
+        if (e == null) {
+            onResult(bids ?: emptyList())
+        } else {
+            onError(e.localizedMessage ?: "Failed to fetch bids.")
+        }
+    }
+}
+
+// Dummy data classes for compilation. Replace with actual definitions from your project.
+data class DigitalMarketEvent(val originalMarketName: String, val cancellationReason: String, val eventDuration: Int, val startTime: Date)
+data class TraditionalMarket(val id: String?, val name: String, val location: String, val address: String, val marketType: MarketType, val marketDays: List<String>, val startTime: String, val endTime: String, val specialties: List<String>, val culturalSignificance: String)
+data class MarketCalendarEntry(val marketName: String, val date: Date, val dayOfWeek: String, val location: String, val specialties: List<String>, val marketType: MarketType, val culturalEvents: List<String>)
+data class PreMarketOrder(val id: String?, val fowlType: String, val breed: String, val quantity: Int, val reservedQuantity: Int, val pricePerBird: Double, val marketDate: Date, val reservationDeadline: Date, val description: String, val culturalContext: String, val status: PreMarketOrderStatus, val sellerName: String?)
+data class GroupBuyingRequest(val id: String?, val title: String, val fowlType: String, val breed: String, val targetQuantity: Int, val totalCommittedQuantity: Int, val maxPricePerBird: Double, val deadline: Date, val currentParticipants: Int, val maxParticipants: Int, val culturalPurpose: String, val status: GroupBuyingStatus)
+data class MarketTrend(val id: String?, val fowlType: String, val breed: String, val marketDate: Date, val averagePrice: Double, val lowestPrice: Double, val highestPrice: Double, val totalSold: Int, val demandLevel: DemandLevel, val supplierCount: Int, val festivalImpact: String)
+data class PricePrediction(val fowlType: String, val breed: String, val targetDate: Date, val predictedPrice: Double, val confidence: Double, val priceRange: Pair<Double, Double>, val influencingFactors: List<String>, val recommendedAction: String)
+
+enum class MarketType { DAILY, WEEKLY, MONTHLY, FESTIVAL_SPECIAL }
+enum class PreMarketOrderStatus { OPEN, PARTIALLY_RESERVED, FULLY_RESERVED, CONFIRMED, COMPLETED, CANCELLED }
+enum class GroupBuyingStatus { ORGANIZING, ACTIVE, MINIMUM_REACHED, CONFIRMED, COMPLETED, CANCELLED }
+enum class DemandLevel { VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH }
+
+// Placeholder for RoosterTheme - ensure it's defined in your project
+@Composable
+fun RoosterTheme(content: @Composable () -> Unit) {
+    MaterialTheme(content = content)
 }
