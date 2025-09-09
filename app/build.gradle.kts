@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.firebase.crashlytics)
     id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
+    id("com.google.devtools.ksp") version "2.0.21-1.0.25"
 }
 
 android {
@@ -64,19 +65,26 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("io.coil-kt:coil-compose:2.5.0")
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.20")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("org.jetbrains.kotlin:kotlin-test:1.9.20")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // Test dependencies
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation("com.google.accompanist:accompanist-permissions:0.34.0") // Added Accompanist Permissions
+    // Room dependencies for robust offline photo upload queueing
+    implementation("androidx.room:room-runtime:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
 }

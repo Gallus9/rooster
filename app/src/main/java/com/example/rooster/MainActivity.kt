@@ -4,6 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
@@ -15,6 +20,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -29,9 +36,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -59,66 +69,108 @@ fun RoosterEnthusiastApp() {
     val coroutineScope = rememberCoroutineScope()
     var userRole by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var isCheckingAuth by remember { mutableStateOf(true) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
         try {
             val currentUser = ParseUser.getCurrentUser()
             if (currentUser == null) {
-                navController.navigate("auth")
+                isCheckingAuth = false
+                // User not logged in, will show auth screen via the null userRole check later
             } else {
-                userRole = currentUser.getString("role") ?: "general"
+                userRole = currentUser.getString("role") ?: "general" // Default to general if no role
+                isCheckingAuth = false
             }
         } catch (e: Exception) {
             error = e.message
+            isCheckingAuth = false
             coroutineScope.launch {
-                snackbarHostState.showSnackbar("Error fetching user role: ${e.message}")
+                snackbarHostState.showSnackbar("Error checking authentication: ${e.message}")
             }
         }
     }
 
-    userRole?.let { role ->
-        Scaffold(
-            bottomBar = {
-                BottomNavigationBar(navController, role)
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination =
-                    when (role) {
-                        "general" -> "market"
-                        "farmer" -> "home"
-                        "highLevel" -> "home"
-                        else -> "market"
-                    },
-                modifier = Modifier.padding(innerPadding),
-            ) {
-                composable("auth") { authScreen(navController) }
-                composable("home") {
-                    when (role) {
-                        "farmer" -> FarmerHomeScreen()
-                        "highLevel" -> HighLevelHomeScreen()
-                        else -> Text("Home Screen Not Available for This Role")
+    if (isCheckingAuth) {
+        // Show loading screen while checking authentication
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Loading Rooster App...")
+        }
+        return
+    }
+
+    // Determine start destination outside NavHost for clarity
+    val startDestination = when (userRole) {
+        "farmer" -> "home"
+        "highLevel" -> "home"
+        "general" -> "market"
+        else -> "auth" // Default to auth if role is null (not logged in) or unknown
+    }
+
+    Scaffold(
+        bottomBar = {
+            // Only show bottom nav if a user role is determined and it's not the auth screen
+            if (userRole != null && startDestination != "auth") {
+                BottomNavigationBar(navController, userRole!!)
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            composable("auth") { authScreen(navController) } // Ensure authScreen is defined elsewhere
+            
+            composable("home") {
+                // This screen should now only be reached if userRole is "farmer" or "highLevel"
+                // as per the startDestination logic.
+                when (userRole) {
+                    "farmer" -> FarmerHomeScreen() // Ensure FarmerHomeScreen is defined
+                    "highLevel" -> HighLevelHomeScreen() // Ensure HighLevelHomeScreen is defined
+                    else -> {
+                        // This case should ideally not be reached if startDestination is correct.
+                        // Fallback or error screen, or navigate to auth if role somehow becomes null.
+                        LaunchedEffect(Unit) {
+                            navController.navigate("auth") {
+                                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            }
+                        }
                     }
                 }
-                composable("market") { MarketplaceScreen() }
-                composable("explore") { ExploreScreen() }
-                composable("create") { CommunityFeedScreen() }
-                composable("cart") { CartScreen() }
-                composable("community") { CommunityScreen() }
-                composable("dashboard") { DashboardScreen() }
-                composable("transfers") { TransfersScreen() }
-                composable("profile") { ProfileScreen(onLogout = { navController.navigate("auth") }) }
-                composable("transferVerification/{orderId}") { backStackEntry ->
-                    val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-                    TransferVerificationScreen(orderId = orderId, onVerified = { navController.popBackStack() })
-                }
             }
+            composable("market") { MarketplaceScreen() } // Ensure MarketplaceScreen is defined
+            composable("explore") { ExploreScreen() } // Ensure ExploreScreen is defined
+            composable("create") { CommunityFeedScreen() } // Ensure CommunityFeedScreen is defined
+            composable("cart") { CartScreen() } // Ensure CartScreen is defined
+            composable("community") { CommunityScreen() } // Ensure CommunityScreen is defined
+            composable("dashboard") { DashboardScreen() } // Ensure DashboardScreen is defined
+            composable("transfers") { TransfersScreen() } // Ensure TransfersScreen is defined
+            composable("profile") {
+                ProfileScreen(onLogout = {
+                    ParseUser.logOut()
+                    userRole = null // Clear role on logout
+                    navController.navigate("auth") {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                    }
+                })
+            }
+            composable("transferVerification/{orderId}") { backStackEntry ->
+                val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+                TransferVerificationScreen(
+                    orderId = orderId,
+                    onVerified = { navController.popBackStack() },
+                ) // Ensure TransferVerificationScreen is defined
+            }
+            // Removed the problematic "main" composable route
         }
-    } ?: run {
-        authScreen(navController)
     }
 
     error?.let {

@@ -1,6 +1,5 @@
 package com.example.rooster
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -11,39 +10,35 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.* 
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.parse.ParseFile
 import com.parse.ParseObject
 import com.parse.ParseQuery
 import com.parse.ParseUser
-import com.parse.SaveCallback
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,24 +48,11 @@ fun MarketplaceScreen() {
         listOf("Digital Market", "Traditional Markets", "Pre-Orders", "Group Buying", "Trends")
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Enhanced Tab Row with Traditional Market Integration
-        TabRow(
+        com.example.rooster.ui.components.MarketplaceTabRow(
             selectedTabIndex = currentTab,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = currentTab == index,
-                    onClick = { currentTab = index },
-                    text = {
-                        Text(
-                            text = title,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize
-                        )
-                    }
-                )
-            }
-        }
+            onTabSelected = { currentTab = it },
+            tabs = tabs
+        )
 
         // Tab Content
         when (currentTab) {
@@ -92,6 +74,8 @@ fun DigitalMarketplaceTab() {
     var error by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var digitalEvents by remember { mutableStateOf(listOf<DigitalMarketEvent>()) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val marketService = remember { TraditionalMarketService() }
     val imagePickerLauncher =
@@ -115,51 +99,109 @@ fun DigitalMarketplaceTab() {
     }
 
     fun addListing() {
+        val currentUser = ParseUser.getCurrentUser()
+        if (currentUser == null) {
+            error = "User not logged in. Please log in again."
+            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+            return
+        }
+    
+        if (title.isBlank() || price.isBlank()) {
+            error = "Title and Price cannot be empty."
+            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+            return
+        }
+    
+        loading = true
+    
         val listing = ParseObject("Listing")
         listing.put("title", title)
-        listing.put("price", price)
-        listing.put("owner", ParseUser.getCurrentUser())
+        try {
+            listing.put("price", price.toDouble())
+        } catch (e: NumberFormatException) {
+            error = "Invalid price format. Please enter a number."
+            loading = false
+            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+            return
+        }
+        listing.put("owner", currentUser)
+    
         if (imageUri != null) {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri!!)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            val compressedBytes = compressImage(bitmap)
-            if (compressedBytes != null) {
-                val parseFile = ParseFile("listing_image.jpg", compressedBytes)
-                parseFile.saveInBackground(
-                    SaveCallback { e ->
+            try {
+                context.contentResolver.openInputStream(imageUri!!)?.use { inputStream ->
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    if (bitmap == null) {
+                        error = "Failed to decode image. Please try a different image."
+                        loading = false
+                        coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                        return@addListing
+                    }
+    
+                    val compressedBytes = compressImage(bitmap)
+                    if (compressedBytes == null) {
+                        error = "Failed to compress image."
+                        loading = false
+                        coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                        return@addListing
+                    }
+    
+                    if (compressedBytes.size > 10 * 1024 * 1024) {
+                         error = "Image is too large even after compression (max 10MB)."
+                         loading = false
+                         coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                         return@addListing
+                    }
+    
+                    val parseFile = ParseFile("listing_image.jpg", compressedBytes)
+                    parseFile.saveInBackground { e: com.parse.ParseException? ->
                         if (e == null) {
                             listing.put("image", parseFile)
-                            listing.saveInBackground(
-                                SaveCallback { e2 ->
-                                    if (e2 == null) {
-                                        title = ""
-                                        price = ""
-                                        imageUri = null
-                                        fetchListings()
-                                    } else {
-                                        error = (e2 as? com.parse.ParseException)?.localizedMessage ?: "Failed to add listing."
-                                    }
-                                },
-                            )
+                            listing.saveInBackground { e2: com.parse.ParseException? ->
+                                loading = false
+                                if (e2 == null) {
+                                    title = ""
+                                    price = ""
+                                    imageUri = null
+                                    fetchListings()
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Listing added successfully!") }
+                                } else {
+                                    error = e2.localizedMessage ?: "Failed to save listing details."
+                                    FirebaseCrashlytics.getInstance().recordException(e2)
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                                }
+                            }
                         } else {
-                            error = (e as? com.parse.ParseException)?.localizedMessage ?: "Failed to upload image."
+                            loading = false
+                            error = e.localizedMessage ?: "Failed to upload image."
+                            FirebaseCrashlytics.getInstance().recordException(e)
+                            coroutineScope.launch { snackbarHostState.showSnackbar(error) }
                         }
-                    },
-                )
+                    }
+                } ?: run {
+                    error = "Failed to open image stream. Please select image again."
+                    loading = false
+                    coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                }
+            } catch (e: Exception) {
+                loading = false
+                error = "An error occurred with the image: ${e.localizedMessage ?: "Unknown image error"}"
+                FirebaseCrashlytics.getInstance().recordException(e)
+                coroutineScope.launch { snackbarHostState.showSnackbar(error) }
             }
         } else {
-            listing.saveInBackground(
-                SaveCallback { e ->
-                    if (e == null) {
-                        title = ""
-                        price = ""
-                        imageUri = null
-                        fetchListings()
-                    } else {
-                        error = (e as? com.parse.ParseException)?.localizedMessage ?: "Failed to add listing."
-                    }
-                },
-            )
+            listing.saveInBackground { e: com.parse.ParseException? ->
+                loading = false
+                if (e == null) {
+                    title = ""
+                    price = ""
+                    fetchListings()
+                    coroutineScope.launch { snackbarHostState.showSnackbar("Listing added successfully (no image)!") }
+                } else {
+                    error = e.localizedMessage ?: "Failed to add listing without image."
+                    FirebaseCrashlytics.getInstance().recordException(e)
+                    coroutineScope.launch { snackbarHostState.showSnackbar(error) }
+                }
+            }
         }
     }
 
@@ -169,14 +211,15 @@ fun DigitalMarketplaceTab() {
         marketService.fetchActiveDigitalMarketEvents(
             onResult = { digitalEvents = it },
             onError = { error = it ?: "Failed to load digital events" },
-            setLoading = { }
+            setLoading = { },
         )
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         // Digital Market Events Section
         if (digitalEvents.isNotEmpty()) {
@@ -184,12 +227,12 @@ fun DigitalMarketplaceTab() {
                 Text(
                     "🔄 Active Digital Market Events",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(digitalEvents) { event ->
                         DigitalEventCard(event = event)
@@ -229,7 +272,7 @@ fun DigitalMarketplaceTab() {
                     AsyncImage(
                         model = it,
                         contentDescription = "Selected image",
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier.size(64.dp),
                     )
                 }
             }
@@ -253,9 +296,10 @@ fun DigitalMarketplaceTab() {
                     exit = fadeOut(),
                 ) {
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text("Title: ${listing.getString("title")}")
@@ -266,9 +310,10 @@ fun DigitalMarketplaceTab() {
                                 AsyncImage(
                                     model = it,
                                     contentDescription = "Listing image",
-                                    modifier = Modifier
-                                        .height(120.dp)
-                                        .fillMaxWidth(),
+                                    modifier =
+                                        Modifier
+                                            .height(120.dp)
+                                            .fillMaxWidth(),
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
@@ -298,7 +343,7 @@ fun TraditionalMarketsTab() {
             region = if (selectedRegion == "All Regions") "" else selectedRegion,
             onResult = { markets = it },
             onError = { error = it ?: "Failed to load markets" },
-            setLoading = { loading = it }
+            setLoading = { loading = it },
         )
 
         // Fetch next 30 days market calendar
@@ -312,30 +357,31 @@ fun TraditionalMarketsTab() {
             endDate = endDate,
             onResult = { marketCalendar = it },
             onError = { },
-            setLoading = { }
+            setLoading = { },
         )
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Filled.CalendarToday,
                     contentDescription = "Traditional Markets",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "🏪 Traditional Santa/Bajar Markets",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -346,17 +392,17 @@ fun TraditionalMarketsTab() {
             Text(
                 "Select Region:",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.height(8.dp))
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(regions) { region ->
                     FilterChip(
                         selected = selectedRegion == region,
                         onClick = { selectedRegion = region },
-                        label = { Text(region) }
+                        label = { Text(region) },
                     )
                 }
             }
@@ -369,7 +415,7 @@ fun TraditionalMarketsTab() {
                 Text(
                     "📅 Upcoming Market Days",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -395,7 +441,7 @@ fun TraditionalMarketsTab() {
                 Text(
                     "🏪 Registered Markets (${markets.size})",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -420,32 +466,33 @@ fun PreOrdersTab() {
         marketService.fetchPreMarketOrders(
             onResult = { preOrders = it },
             onError = { error = it ?: "Failed to load pre-orders" },
-            setLoading = { loading = it }
+            setLoading = { loading = it },
         )
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Filled.LocalOffer,
                         contentDescription = "Pre-Orders",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "📦 Pre-Market Orders",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
 
@@ -464,23 +511,23 @@ fun PreOrdersTab() {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
                             "🛒 No Pre-Orders Available",
                             style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "Secure your poultry purchases before market day. Create a pre-order to reserve birds from trusted sellers.",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -501,9 +548,9 @@ fun PreOrdersTab() {
                 marketService.fetchPreMarketOrders(
                     onResult = { preOrders = it },
                     onError = { error = it ?: "Failed to load pre-orders" },
-                    setLoading = { loading = it }
+                    setLoading = { loading = it },
                 )
-            }
+            },
         )
     }
 }
@@ -521,32 +568,33 @@ fun GroupBuyingTab() {
         marketService.fetchGroupBuyingRequests(
             onResult = { groupRequests = it },
             onError = { error = it ?: "Failed to load group buying requests" },
-            setLoading = { loading = it }
+            setLoading = { loading = it },
         )
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Filled.Group,
                         contentDescription = "Group Buying",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "👥 Group Buying",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
 
@@ -558,13 +606,13 @@ fun GroupBuyingTab() {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
                 Text(
                     "💡 Coordinate with other buyers to get better prices through bulk purchasing. Perfect for festival seasons and community events!",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
 
@@ -579,23 +627,23 @@ fun GroupBuyingTab() {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
                             "👥 No Active Group Buys",
                             style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "Start or join group buying requests to get better prices through collective purchasing power.",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -616,9 +664,9 @@ fun GroupBuyingTab() {
                 marketService.fetchGroupBuyingRequests(
                     onResult = { groupRequests = it },
                     onError = { error = it ?: "Failed to load group buying requests" },
-                    setLoading = { loading = it }
+                    setLoading = { loading = it },
                 )
-            }
+            },
         )
     }
 }
@@ -638,22 +686,23 @@ fun MarketTrendsTab() {
     val breeds = listOf("Aseel", "Brahma", "Kadaknath", "Country Chicken", "Hybrid")
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Filled.TrendingUp,
                     contentDescription = "Market Trends",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "📈 Market Trends & Analytics",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -666,7 +715,7 @@ fun MarketTrendsTab() {
                     Text(
                         "Filter Options",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -676,7 +725,7 @@ fun MarketTrendsTab() {
                             FilterChip(
                                 selected = selectedFowlType == type,
                                 onClick = { selectedFowlType = type },
-                                label = { Text(type) }
+                                label = { Text(type) },
                             )
                         }
                     }
@@ -688,7 +737,7 @@ fun MarketTrendsTab() {
                             FilterChip(
                                 selected = selectedBreed == breed,
                                 onClick = { selectedBreed = breed },
-                                label = { Text(breed) }
+                                label = { Text(breed) },
                             )
                         }
                     }
@@ -714,14 +763,14 @@ fun MarketTrendsTab() {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Text(
                         "📊 Market trend data will appear here once available. Historical pricing, demand patterns, and seasonal variations help farmers make informed selling decisions.",
                         modifier = Modifier.padding(24.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -738,28 +787,29 @@ fun MarketTrendsTab() {
 @Composable
 fun DigitalEventCard(event: DigitalMarketEvent) {
     Card(
-        modifier = Modifier
-            .width(280.dp)
-            .clip(RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        modifier =
+            Modifier
+                .width(280.dp)
+                .clip(RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 "🔄 Emergency Digital Market",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Reason: ${event.cancellationReason}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Text(
                 "Duration: ${event.eventDuration} hours",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = MaterialTheme.colorScheme.onErrorContainer,
             )
         }
     }
@@ -770,37 +820,38 @@ fun MarketCalendarCard(entry: MarketCalendarEntry) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { }
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable { },
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     entry.marketName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     "${dateFormatter.format(entry.date)} • ${entry.dayOfWeek}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     entry.location,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (entry.specialties.isNotEmpty()) {
                     Text(
                         "Specialties: ${entry.specialties.joinToString(", ")}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -809,13 +860,13 @@ fun MarketCalendarCard(entry: MarketCalendarEntry) {
                 Text(
                     entry.marketType.name.replace("_", " "),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 if (entry.culturalEvents.isNotEmpty()) {
                     Text(
                         "🎉 Festival",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -826,33 +877,34 @@ fun MarketCalendarCard(entry: MarketCalendarEntry) {
 @Composable
 fun TraditionalMarketCard(market: TraditionalMarket) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { }
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable { },
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         market.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         market.location,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     if (market.address.isNotEmpty()) {
                         Text(
                             market.address,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -861,11 +913,11 @@ fun TraditionalMarketCard(market: TraditionalMarket) {
                     Button(
                         onClick = { },
                         enabled = false,
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(32.dp),
                     ) {
                         Text(
                             market.marketType.name.replace("_", " "),
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
@@ -876,14 +928,14 @@ fun TraditionalMarketCard(market: TraditionalMarket) {
             if (market.marketDays.isNotEmpty()) {
                 Text(
                     "Days: ${market.marketDays.joinToString(", ")}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
 
             if (market.startTime.isNotEmpty() && market.endTime.isNotEmpty()) {
                 Text(
                     "Time: ${market.startTime} - ${market.endTime}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
 
@@ -891,7 +943,7 @@ fun TraditionalMarketCard(market: TraditionalMarket) {
                 Text(
                     "Specialties: ${market.specialties.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -899,7 +951,7 @@ fun TraditionalMarketCard(market: TraditionalMarket) {
                 Text(
                     "Cultural: ${market.culturalSignificance}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -911,25 +963,26 @@ fun PreOrderCard(order: PreMarketOrder) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     "${order.fowlType} - ${order.breed}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     "₹${order.pricePerBird}/bird",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
 
@@ -937,16 +990,16 @@ fun PreOrderCard(order: PreMarketOrder) {
 
             Text(
                 "Quantity Available: ${order.quantity - order.reservedQuantity}/${order.quantity}",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 "Market Date: ${dateFormatter.format(order.marketDate)}",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 "Reservation Deadline: ${dateFormatter.format(order.reservationDeadline)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
 
             if (order.description.isNotEmpty()) {
@@ -954,7 +1007,7 @@ fun PreOrderCard(order: PreMarketOrder) {
                 Text(
                     order.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -963,7 +1016,7 @@ fun PreOrderCard(order: PreMarketOrder) {
                 Text(
                     "🎉 ${order.culturalContext}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -971,22 +1024,22 @@ fun PreOrderCard(order: PreMarketOrder) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Button(
                     onClick = { },
                     enabled = false,
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(32.dp),
                 ) {
                     Text(
                         order.status.name.replace("_", " "),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
 
                 Button(
                     onClick = { /* Reserve order */ },
-                    enabled = order.reservedQuantity < order.quantity
+                    enabled = order.reservedQuantity < order.quantity,
                 ) {
                     Text("Reserve Now")
                 }
@@ -998,23 +1051,27 @@ fun PreOrderCard(order: PreMarketOrder) {
 @Composable
 fun GroupBuyingCard(request: GroupBuyingRequest) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    val progress = if (request.targetQuantity > 0) {
-        (request.totalCommittedQuantity.toFloat() / request.targetQuantity.toFloat()).coerceIn(
-            0f,
-            1f
-        )
-    } else 0f
+    val progress =
+        if (request.targetQuantity > 0) {
+            (request.totalCommittedQuantity.toFloat() / request.targetQuantity.toFloat()).coerceIn(
+                0f,
+                1f,
+            )
+        } else {
+            0f
+        }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 request.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1022,20 +1079,20 @@ fun GroupBuyingCard(request: GroupBuyingRequest) {
             Text(
                 "${request.fowlType} - ${request.breed}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
             Text(
                 "Max Price: ₹${request.maxPricePerBird}/bird",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 "Target: ${request.targetQuantity} birds",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 "Deadline: ${dateFormatter.format(request.deadline)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1044,22 +1101,22 @@ fun GroupBuyingCard(request: GroupBuyingRequest) {
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
                         "Progress: ${request.totalCommittedQuantity}/${request.targetQuantity}",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
                         "${(progress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
                     progress = progress,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -1067,14 +1124,14 @@ fun GroupBuyingCard(request: GroupBuyingRequest) {
 
             Text(
                 "Participants: ${request.currentParticipants}/${request.maxParticipants}",
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
             )
 
             if (request.culturalPurpose.isNotEmpty()) {
                 Text(
                     "🎉 ${request.culturalPurpose}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -1082,22 +1139,22 @@ fun GroupBuyingCard(request: GroupBuyingRequest) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Button(
                     onClick = { },
                     enabled = false,
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(32.dp),
                 ) {
                     Text(
                         request.status.name.replace("_", " "),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
 
                 Button(
                     onClick = { /* Join group buy */ },
-                    enabled = request.currentParticipants < request.maxParticipants
+                    enabled = request.currentParticipants < request.maxParticipants,
                 ) {
                     Text("Join Group")
                 }
@@ -1111,24 +1168,25 @@ fun MarketTrendCard(trend: MarketTrend) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     "${trend.fowlType} - ${trend.breed}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     dateFormatter.format(trend.marketDate),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -1136,21 +1194,21 @@ fun MarketTrendCard(trend: MarketTrend) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
                     Text("Avg Price:", style = MaterialTheme.typography.bodySmall)
                     Text(
                         "₹${trend.averagePrice}",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 Column {
                     Text("Range:", style = MaterialTheme.typography.bodySmall)
                     Text(
                         "₹${trend.lowestPrice} - ₹${trend.highestPrice}",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 Column {
@@ -1163,15 +1221,15 @@ fun MarketTrendCard(trend: MarketTrend) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     "Demand: ${trend.demandLevel.name.replace("_", " ")}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
                     "Suppliers: ${trend.supplierCount}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
 
@@ -1180,7 +1238,7 @@ fun MarketTrendCard(trend: MarketTrend) {
                 Text(
                     "🎉 ${trend.festivalImpact}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -1193,14 +1251,14 @@ fun PricePredictionCard(prediction: PricePrediction) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 "🔮 Price Prediction",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1208,44 +1266,44 @@ fun PricePredictionCard(prediction: PricePrediction) {
             Text(
                 "${prediction.fowlType} - ${prediction.breed}",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
                 "Target Date: ${dateFormatter.format(prediction.targetDate)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
                     Text(
                         "Predicted Price:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
                         "₹${prediction.predictedPrice.toInt()}",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         "Confidence:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
                         "${prediction.confidence.toInt()}%",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
             }
@@ -1255,7 +1313,7 @@ fun PricePredictionCard(prediction: PricePrediction) {
             Text(
                 "Range: ₹${prediction.priceRange.first.toInt()} - ₹${prediction.priceRange.second.toInt()}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
             if (prediction.influencingFactors.isNotEmpty()) {
@@ -1263,7 +1321,7 @@ fun PricePredictionCard(prediction: PricePrediction) {
                 Text(
                     "Factors: ${prediction.influencingFactors.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
 
@@ -1273,7 +1331,7 @@ fun PricePredictionCard(prediction: PricePrediction) {
                     "💡 ${prediction.recommendedAction}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -1284,7 +1342,7 @@ fun PricePredictionCard(prediction: PricePrediction) {
 @Composable
 fun CreatePreOrderDialog(
     onDismiss: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
 ) {
     // Implementation for create pre-order dialog
     // This would include form fields for all PreMarketOrder properties
@@ -1301,14 +1359,14 @@ fun CreatePreOrderDialog(
             Button(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }
 
 @Composable
 fun CreateGroupBuyDialog(
     onDismiss: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
 ) {
     // Implementation for create group buy dialog
     // This would include form fields for all GroupBuyingRequest properties
@@ -1325,7 +1383,7 @@ fun CreateGroupBuyDialog(
             Button(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }
 
@@ -1354,9 +1412,12 @@ fun BiddingSection(listingId: String) {
         enter = fadeIn(),
         exit = fadeOut(),
     ) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp)) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+        ) {
             Text("Bids:", style = MaterialTheme.typography.titleSmall)
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -1378,8 +1439,64 @@ fun BiddingSection(listingId: String) {
 }
 
 private fun compressImage(bitmap: Bitmap): ByteArray? {
-    val outputStream = ByteArrayOutputStream()
-    val quality = 80 // 80% quality for JPEG compression
-    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
-    return outputStream.toByteArray()
+    return try {
+        val outputStream = ByteArrayOutputStream()
+        // Adjusted quality based on previous log. For 2G, it was 20%. Let's keep it higher for general listings for now.
+        val quality = 75 
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        if (!bitmap.isRecycled) {
+            bitmap.recycle() // Ensure bitmap is recycled after compression
+        }
+        outputStream.toByteArray()
+    } catch (e: Exception) {
+        FirebaseCrashlytics.getInstance().recordException(RuntimeException("Image compression failed: ${e.message}", e))
+        null
+    }
+}
+
+// Dummy object for TraditionalMarketService for compilation. Replace with actual implementation.
+object TraditionalMarketService {
+    fun fetchActiveDigitalMarketEvents(onResult: (List<DigitalMarketEvent>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchTraditionalMarkets(region: String, onResult: (List<TraditionalMarket>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchMarketCalendar(startDate: Date, endDate: Date, onResult: (List<MarketCalendarEntry>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchPreMarketOrders(onResult: (List<PreMarketOrder>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+    fun fetchGroupBuyingRequests(onResult: (List<GroupBuyingRequest>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) { setLoading(false); onResult(emptyList()) }
+}
+
+// Define or import fetchBids if not already present
+fun fetchBids(listingId: String, onResult: (List<ParseObject>) -> Unit, onError: (String?) -> Unit, setLoading: (Boolean) -> Unit) {
+    // Placeholder - implement actual Parse query
+    setLoading(true)
+    val query = ParseQuery.getQuery<ParseObject>("Bid") // Assuming "Bid" class
+    query.whereEqualTo("listingId", listingId)
+    query.include("user") // Include user data for username
+    query.orderByDescending("createdAt")
+    query.findInBackground { bids, e ->
+        setLoading(false)
+        if (e == null) {
+            onResult(bids ?: emptyList())
+        } else {
+            onError(e.localizedMessage ?: "Failed to fetch bids.")
+        }
+    }
+}
+
+// Dummy data classes for compilation. Replace with actual definitions from your project.
+data class DigitalMarketEvent(val originalMarketName: String, val cancellationReason: String, val eventDuration: Int, val startTime: Date)
+data class TraditionalMarket(val id: String?, val name: String, val location: String, val address: String, val marketType: MarketType, val marketDays: List<String>, val startTime: String, val endTime: String, val specialties: List<String>, val culturalSignificance: String)
+data class MarketCalendarEntry(val marketName: String, val date: Date, val dayOfWeek: String, val location: String, val specialties: List<String>, val marketType: MarketType, val culturalEvents: List<String>)
+data class PreMarketOrder(val id: String?, val fowlType: String, val breed: String, val quantity: Int, val reservedQuantity: Int, val pricePerBird: Double, val marketDate: Date, val reservationDeadline: Date, val description: String, val culturalContext: String, val status: PreMarketOrderStatus, val sellerName: String?)
+data class GroupBuyingRequest(val id: String?, val title: String, val fowlType: String, val breed: String, val targetQuantity: Int, val totalCommittedQuantity: Int, val maxPricePerBird: Double, val deadline: Date, val currentParticipants: Int, val maxParticipants: Int, val culturalPurpose: String, val status: GroupBuyingStatus)
+data class MarketTrend(val id: String?, val fowlType: String, val breed: String, val marketDate: Date, val averagePrice: Double, val lowestPrice: Double, val highestPrice: Double, val totalSold: Int, val demandLevel: DemandLevel, val supplierCount: Int, val festivalImpact: String)
+data class PricePrediction(val fowlType: String, val breed: String, val targetDate: Date, val predictedPrice: Double, val confidence: Double, val priceRange: Pair<Double, Double>, val influencingFactors: List<String>, val recommendedAction: String)
+
+enum class MarketType { DAILY, WEEKLY, MONTHLY, FESTIVAL_SPECIAL }
+enum class PreMarketOrderStatus { OPEN, PARTIALLY_RESERVED, FULLY_RESERVED, CONFIRMED, COMPLETED, CANCELLED }
+enum class GroupBuyingStatus { ORGANIZING, ACTIVE, MINIMUM_REACHED, CONFIRMED, COMPLETED, CANCELLED }
+enum class DemandLevel { VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH }
+
+// Placeholder for RoosterTheme - ensure it's defined in your project
+@Composable
+fun RoosterTheme(content: @Composable () -> Unit) {
+    MaterialTheme(content = content)
 }
